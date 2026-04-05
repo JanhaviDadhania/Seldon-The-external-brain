@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seldon | External Brain</title>
+    <meta name="description" content="External brain for your brain :) See your ideas, generate new ones, find connections, find themes." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body {
+        width: 100%;
+        cursor: pointer;
+        background: #f8f4ed;
+      }
+
+      .dot-grid {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle, rgba(83, 65, 47, 0.18) 1px, transparent 1px),
+          linear-gradient(180deg, #f8f4ed 0%, #f1eadf 100%);
+        background-size: 14px 14px, auto;
+      }
+
+      .watermark {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "EB Garamond", Georgia, serif;
+        font-size: 22vw;
+        font-weight: 400;
+        color: rgba(26, 18, 8, 0.06);
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+        line-height: 1;
+      }
+
+      .bg-fixed {
+        position: fixed;
+        inset: 0;
+        background: url('/static/harmonograph.webp') center center / cover no-repeat;
+        opacity: 0.13;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .page {
+        position: relative;
+        z-index: 1;
+        padding: 14vw 10vw 20vw;
+        max-width: 1100px;
+      }
+
+      p {
+        font-family: "EB Garamond", Georgia, serif;
+        font-size: clamp(14px, 2.1vw, 32px);
+        font-weight: 400;
+        line-height: 1.22;
+        color: #1a1208;
+        margin-bottom: 0.9em;
+      }
+
+      p.big {
+        font-size: clamp(28px, 4.2vw, 64px);
+      }
+
+      p.small {
+        font-size: clamp(15px, 1.4vw, 22px);
+        color: rgba(26, 18, 8, 0.5);
+        margin-top: 6vw;
+        letter-spacing: 0.01em;
+      }
+
+      em {
+        font-style: italic;
+      }
+
+      .enter {
+        display: inline-block;
+        margin-top: 6vw;
+        font-family: "EB Garamond", Georgia, serif;
+        font-size: clamp(14px, 1.2vw, 20px);
+        color: rgba(26, 18, 8, 0.38);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body onclick="window.location.href='/graph'">
+    <div class="dot-grid"></div>
+    <div class="bg-fixed"></div>
+    <div class="watermark">the brain</div>
+    <div class="page">
+      <p>Look at the Serengeti.</p>
+      <p>The cheetah does not wonder if it is fast enough. It simply runs. Four million years of evolution made sure of that. The elephant does not question its size. The eagle does not doubt its eyes.</p>
+      <p>And then there is us.</p>
+      <p class="big">Soft. Slow. Frightened. Eating what we can find, hiding when we need to, dying young, mostly. By any honest measure of that plain two hundred thousand years ago — we were not the obvious bet.</p>
+      <p>But after eating, in those few stolen moments of peace, we looked up.</p>
+      <p>We could not help it.</p>
+      <p>And here is the strange part — we were not alone in this. The elephant looks up too. The whale has been singing into three thousand metres of dark ocean for longer than our species has existed. No survival manual explains that song.</p>
+      <p class="big">Wonder did not begin with us.</p>
+      <p>But the pursuit did.</p>
+      <p>Not the fastest, not the strongest, not the largest — we followed the question anyway. With the only thing we had. Three pounds of matter that could not outrun anything, but could not stop asking.</p>
+      <p>That is the whole story. That has always been the whole story.</p>
+      <p class="big">We just got new hardware.</p>
+      <p class="small">Click anywhere to see what we built.</p>
+    </div>
+  </body>
+</html>

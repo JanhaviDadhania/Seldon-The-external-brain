@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/advanced.css" />
+  </head>
+  <body>
+    <main class="advanced-shell">
+      <header class="advanced-header">
+        <a class="back-link" href="/graph">Back</a>
+        <div class="advanced-workspace">
+          <label for="advanced-workspace-select">Workspace</label>
+          <select id="advanced-workspace-select"></select>
+        </div>
+      </header>
+
+      <section class="section-block">
+        <h2 class="section-title">Traversal</h2>
+        <div class="tool-grid">
+          <article class="tool-card">
+            <h2>Node Neighborhood</h2>
+            <p class="tool-description">
+              Fetches the nodes directly connected to one node, along with the edge that connects them.
+              Use this when you want the immediate local neighborhood only.
+            </p>
+            <p class="tool-example">
+              Example request: node_id=`6`, direction=`both`, edge_type=`supports`, limit=`20`
+            </p>
+            <p class="tool-options">
+              Edge type options: `similar_to`, `expands`, `contradicts`, `supports`,
+              `led_to`, `belongs_to_topic`, `derived_from`, `mentions`, `inspired_by`, `part_of`, `reply_to`
+            </p>
+            <form data-method="GET" data-endpoint-template="/nodes/{node_id}/neighbors">
+              <label>Node ID <input name="node_id" type="number" required /></label>
+              <label>Direction <input name="direction" type="text" value="both" /></label>
+              <label>Edge Type <input name="edge_type" type="text" /></label>
+              <label>Limit <input name="limit" type="number" value="20" /></label>
+              <button type="submit">Send</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+
+          <article class="tool-card">
+            <h2>Subgraph Fetch</h2>
+            <p class="tool-description">
+              Traverses outward from one root node and returns the connected subgraph up to the chosen depth and limit.
+              Use this to inspect a local cluster around a node.
+            </p>
+            <p class="tool-example">
+              Example request: root node_id=`6`, depth=`2`, limit=`12`, edge_type=`supports`
+            </p>
+            <p class="tool-options">
+              Edge type options: `similar_to`, `expands`, `contradicts`, `supports`,
+              `led_to`, `belongs_to_topic`, `derived_from`, `mentions`, `inspired_by`, `part_of`, `reply_to`
+            </p>
+            <form data-method="GET" data-endpoint-template="/nodes/{node_id}/subgraph">
+              <label>Root Node ID <input name="node_id" type="number" required /></label>
+              <label>Depth <input name="depth" type="number" value="2" /></label>
+              <label>Limit <input name="limit" type="number" value="12" /></label>
+              <label>Edge Type <input name="edge_type" type="text" /></label>
+              <button type="submit">Send</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+
+          <article class="tool-card">
+            <h2>Weighted Traversal</h2>
+            <p class="tool-description">
+              Uses the same subgraph traversal, but practically you use it to inspect stronger paths first.
+              Returned nodes include `path_score`, which favors paths with stronger edge weights.
+            </p>
+            <p class="tool-example">
+              Example request: root node_id=`6`, depth=`3`, limit=`20`, edge_type=`similar_to`
+            </p>
+            <p class="tool-options">
+              Edge type options: `similar_to`, `expands`, `contradicts`, `supports`,
+              `led_to`, `belongs_to_topic`, `derived_from`, `mentions`, `inspired_by`, `part_of`, `reply_to`
+            </p>
+            <form data-method="GET" data-endpoint-template="/nodes/{node_id}/subgraph">
+              <label>Root Node ID <input name="node_id" type="number" required /></label>
+              <label>Depth <input name="depth" type="number" value="3" /></label>
+              <label>Limit <input name="limit" type="number" value="20" /></label>
+              <label>Edge Type <input name="edge_type" type="text" /></label>
+              <button type="submit">Send</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+
+          <article class="tool-card">
+            <h2>Topic Traversal</h2>
+            <p class="tool-description">
+              Starts from a topic node and returns the connected notes around that topic.
+              Use this when the root node is a `topic` and you want the topic-centered cluster.
+            </p>
+            <p class="tool-example">
+              Example request: topic node_id=`12`, depth=`2`, limit=`20`
+            </p>
+            <form data-method="GET" data-endpoint-template="/nodes/{node_id}/subgraph">
+              <label>Topic Node ID <input name="node_id" type="number" required /></label>
+              <label>Depth <input name="depth" type="number" value="2" /></label>
+              <label>Limit <input name="limit" type="number" value="20" /></label>
+              <button type="submit">Send</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+
+          <article class="tool-card">
+            <h2>Outline Planning</h2>
+            <p class="tool-description">
+              Builds a sectioned outline from the traversed subgraph. It groups connected nodes by relation type
+              and returns a structured outline for article planning.
+            </p>
+            <p class="tool-example">
+              Example request: root_node_id=`6`, depth=`2`, max_nodes=`12`, edge_type=`supports`
+            </p>
+            <p class="tool-options">
+              Edge type options: `similar_to`, `expands`, `contradicts`, `supports`,
+              `led_to`, `belongs_to_topic`, `derived_from`, `mentions`, `inspired_by`, `part_of`, `reply_to`
+            </p>
+            <form data-method="POST" data-endpoint-template="/outlines/plan">
+              <label>Root Node ID <input name="root_node_id" type="number" required /></label>
+              <label>Depth <input name="depth" type="number" value="2" /></label>
+              <label>Max Nodes <input name="max_nodes" type="number" value="12" /></label>
+              <label>Edge Type <input name="edge_type" type="text" /></label>
+              <button type="submit">Send</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2 class="section-title">Edge Creation</h2>
+        <div class="tool-grid edge-grid">
+          <article class="tool-card edge-card">
+            <h2>Tag Matcher</h2>
+            <p class="tool-description">
+              Independent matcher that compares internal LLM-generated keywords and concepts. User tags remain separate.
+              Tag generation now uses your local Ollama model and edge strength comes from shared generated tags.
+            </p>
+            <p class="tool-example">
+              Example request: function_name=`tag_matcher`, threshold=`0.40`, max_pairs=`20`, extra.model_name=`qwen2.5:3b-instruct`
+            </p>
+            <p class="tool-options">
+              Edge types: `similar_to`, `supports`, `contradicts`, `expands`, `led_to`, `belongs_to_topic`
+            </p>
+            <form data-mode="preview" data-function-name="tag_matcher">
+              <label>Run ID <input name="run_id" type="text" placeholder="optional" /></label>
+              <label>Threshold <input name="threshold" type="number" step="0.01" value="0.40" /></label>
+              <label>Max Pairs <input name="max_pairs" type="number" value="20" /></label>
+              <label>Edge Types Allowed <input name="edge_types_allowed" type="text" value="similar_to,supports,contradicts,expands,led_to,belongs_to_topic" /></label>
+              <label>Nodes JSON<textarea name="nodes_json">[
+  {
+    "id": 6,
+    "type": "idea",
+    "raw_text": "software should evolve like biological organisms",
+    "normalized_text": "software should evolve like biological organisms",
+    "user_tags": []
+  }
+]</textarea></label>
+              <label>Pairs JSON<textarea name="pairs_json">[
+  { "source_node_id": 6, "target_node_id": 12 }
+]</textarea></label>
+              <label>Extra JSON<textarea name="extra_json">{
+  "model_name": "qwen2.5:3b-instruct",
+  "tag_mode": "ollama_keywords_and_concepts"
+}</textarea></label>
+              <button type="submit">Preview</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+
+          <article class="tool-card edge-card">
+            <h2>Embedding Matcher</h2>
+            <p class="tool-description">
+              Independent matcher that scores node pairs using cosine similarity over embeddings.
+              Use a global threshold for now.
+            </p>
+            <p class="tool-example">
+              Example request: function_name=`embedding_matcher`, threshold=`0.72`, max_pairs=`50`
+            </p>
+            <p class="tool-options">
+              Edge types: `similar_to`, `supports`, `contradicts`, `expands`, `led_to`, `belongs_to_topic`
+            </p>
+            <form data-mode="preview" data-function-name="embedding_matcher">
+              <label>Run ID <input name="run_id" type="text" placeholder="optional" /></label>
+              <label>Threshold <input name="threshold" type="number" step="0.01" value="0.72" /></label>
+              <label>Max Pairs <input name="max_pairs" type="number" value="50" /></label>
+              <label>Edge Types Allowed <input name="edge_types_allowed" type="text" value="similar_to,supports,contradicts,expands,led_to,belongs_to_topic" /></label>
+              <label>Nodes JSON<textarea name="nodes_json">[
+  {
+    "id": 6,
+    "type": "idea",
+    "raw_text": "software should evolve like biological organisms",
+    "normalized_text": "software should evolve like biological organisms"
+  },
+  {
+    "id": 12,
+    "type": "line",
+    "raw_text": "software should adapt like organism, and evolve like it",
+    "normalized_text": "software should adapt like organism, and evolve like it"
+  }
+]</textarea></label>
+              <label>Pairs JSON<textarea name="pairs_json">[
+  { "source_node_id": 6, "target_node_id": 12 }
+]</textarea></label>
+              <label>Extra JSON<textarea name="extra_json">{
+  "model_name": "sentence-transformers/all-mpnet-base-v2",
+  "strategy": "cosine_similarity"
+}</textarea></label>
+              <button type="submit">Preview</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+
+          <article class="tool-card edge-card">
+            <h2>LLM Matcher</h2>
+            <p class="tool-description">
+              Independent matcher that asks an LLM to score pairs and choose a basic edge type.
+              Run it on all candidate pairs if you want the model to decide directly.
+            </p>
+            <p class="tool-example">
+              Example request: function_name=`llm_matcher`, threshold=`0.60`, max_pairs=`100`
+            </p>
+            <p class="tool-options">
+              Edge types: `similar_to`, `supports`, `contradicts`, `expands`, `led_to`, `belongs_to_topic`
+            </p>
+            <form data-mode="preview" data-function-name="llm_matcher">
+              <label>Run ID <input name="run_id" type="text" placeholder="optional" /></label>
+              <label>Threshold <input name="threshold" type="number" step="0.01" value="0.60" /></label>
+              <label>Max Pairs <input name="max_pairs" type="number" value="100" /></label>
+              <label>Edge Types Allowed <input name="edge_types_allowed" type="text" value="similar_to,supports,contradicts,expands,led_to,belongs_to_topic" /></label>
+              <label>Nodes JSON<textarea name="nodes_json">[
+  {
+    "id": 6,
+    "type": "idea",
+    "raw_text": "software should evolve like biological organisms",
+    "normalized_text": "software should evolve like biological organisms"
+  },
+  {
+    "id": 4,
+    "type": "idea",
+    "raw_text": "Software should adapt like a biological organism, but remain legible to humans.",
+    "normalized_text": "Software should adapt like a biological organism, but remain legible to humans."
+  }
+]</textarea></label>
+              <label>Pairs JSON<textarea name="pairs_json">[
+  { "source_node_id": 6, "target_node_id": 4 }
+]</textarea></label>
+              <label>Extra JSON<textarea name="extra_json">{
+  "model_name": "gpt-5",
+  "prompt_style": "pairwise_match"
+}</textarea></label>
+              <button type="submit">Preview</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+
+          <article class="tool-card edge-card">
+            <h2>LLM Debator</h2>
+            <p class="tool-description">
+              Independent debate-style matcher with a model arguing for the edge, a model arguing against it,
+              and a judge deciding the result. This is a standalone function and not wired to the graph yet.
+            </p>
+            <p class="tool-example">
+              Example request: function_name=`llm_debator`, threshold=`0.55`, max_pairs=`20`
+            </p>
+            <p class="tool-options">
+              Edge types: `similar_to`, `supports`, `contradicts`, `expands`, `led_to`, `belongs_to_topic`
+            </p>
+            <form data-mode="preview" data-function-name="llm_debator">
+              <label>Run ID <input name="run_id" type="text" placeholder="optional" /></label>
+              <label>Threshold <input name="threshold" type="number" step="0.01" value="0.55" /></label>
+              <label>Max Pairs <input name="max_pairs" type="number" value="20" /></label>
+              <label>Edge Types Allowed <input name="edge_types_allowed" type="text" value="similar_to,supports,contradicts,expands,led_to,belongs_to_topic" /></label>
+              <label>Nodes JSON<textarea name="nodes_json">[
+  {
+    "id": 7,
+    "type": "idea",
+    "raw_text": "the point of autopoiotic system is that it maintains entropy",
+    "normalized_text": "the point of autopoiotic system is that it maintains entropy"
+  },
+  {
+    "id": 6,
+    "type": "idea",
+    "raw_text": "software should evolve like biological organisms",
+    "normalized_text": "software should evolve like biological organisms"
+  }
+]</textarea></label>
+              <label>Pairs JSON<textarea name="pairs_json">[
+  { "source_node_id": 7, "target_node_id": 6 }
+]</textarea></label>
+              <label>Extra JSON<textarea name="extra_json">{
+  "for_model": "gpt-5",
+  "against_model": "gpt-5",
+  "judge_model": "gpt-5",
+  "rounds": 1
+}</textarea></label>
+              <button type="submit">Preview</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+
+          <article class="tool-card edge-card">
+            <h2>Hub Matcher</h2>
+            <p class="tool-description">
+              Independent hub builder that creates higher-level meaning hubs and links notes upward to them.
+              One node can belong to multiple hubs.
+            </p>
+            <p class="tool-example">
+              Example request: function_name=`hub_matcher`, threshold=`0.50`, max_pairs=`30`
+            </p>
+            <p class="tool-options">
+              Edge types: `similar_to`, `supports`, `contradicts`, `expands`, `led_to`, `belongs_to_topic`
+            </p>
+            <form data-mode="preview" data-function-name="hub_matcher">
+              <label>Run ID <input name="run_id" type="text" placeholder="optional" /></label>
+              <label>Threshold <input name="threshold" type="number" step="0.01" value="0.50" /></label>
+              <label>Max Pairs <input name="max_pairs" type="number" value="30" /></label>
+              <label>Edge Types Allowed <input name="edge_types_allowed" type="text" value="similar_to,supports,contradicts,expands,led_to,belongs_to_topic" /></label>
+              <label>Nodes JSON<textarea name="nodes_json">[
+  {
+    "id": 6,
+    "type": "idea",
+    "raw_text": "software should evolve like biological organisms",
+    "normalized_text": "software should evolve like biological organisms"
+  },
+  {
+    "id": 12,
+    "type": "line",
+    "raw_text": "software should adapt like organism, and evolve like it",
+    "normalized_text": "software should adapt like organism, and evolve like it"
+  }
+]</textarea></label>
+              <label>Pairs JSON<textarea name="pairs_json">[
+  { "source_node_id": 6, "target_node_id": 12 }
+]</textarea></label>
+              <label>Extra JSON<textarea name="extra_json">{
+  "hub_depth": 2,
+  "hub_space": "internal"
+}</textarea></label>
+              <button type="submit">Preview</button>
+            </form>
+            <pre class="response"></pre>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/advanced.js" defer></script>
+  </body>
+</html>

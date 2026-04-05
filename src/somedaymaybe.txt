@@ -1,0 +1,7 @@
+1. memex as logo and name of this app
+2. ideas generation algorithms
+3. zipper features in UI
+4. make this app self evolving
+
+5. dark theme 
+6. take telegram id as input

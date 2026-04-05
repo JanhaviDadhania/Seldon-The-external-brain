@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://seldon.railway.app/sitemap.xml

@@ -1,0 +1,30 @@
+AI Agent Readiness — Seldon
+Current level: ~L2.5
+
+=== L1 — Basic Accessibility === DONE
+- Semantic HTML, readable content, clean structure
+
+=== L2 — Discoverability ===
+[ ] llms.txt at root — describes what the app is, links to API
+[ ] robots.txt
+[ ] Meaningful page title and meta description
+
+=== L3 — Structured Interaction ===
+[ ] OpenAPI spec fully documented (descriptions, schemas) — FastAPI /docs already exists, needs descriptions added to all endpoints
+[ ] llms.txt links to /docs
+
+=== L4 — Agent Integration ===
+[ ] API key authentication so agents can call the API programmatically
+[ ] Every UI action has a corresponding API endpoint (all already exist, verify coverage)
+[ ] Webhook support — subscribe to "new node added" events
+[ ] Telegram polling is already close to this
+
+=== L5 — Autonomous Operation ===
+[ ] MCP server — agents (Claude, Cursor, etc.) can connect to Seldon as a tool and read/write the graph directly
+[ ] Streaming responses
+[ ] Bulk operations (add multiple nodes at once)
+[ ] Persistent agent sessions
+
+=== Other Docs ===
+[ ] README.md — what Seldon is, how to run it, features (for humans)
+[ ] llms.txt — for AI agents (overlaps with L2/L3)

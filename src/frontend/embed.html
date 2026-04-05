@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workspace Embed</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/embed.css" />
+  </head>
+  <body>
+    <main class="embed-shell">
+      <section class="embed-graph-panel">
+        <div id="embed-graph-canvas" class="embed-graph-canvas">
+          <svg id="embed-graph-svg" aria-label="embedded workspace graph"></svg>
+        </div>
+      </section>
+      <aside class="embed-detail-panel">
+        <div id="embed-empty-state" class="embed-empty-state">Click a note to inspect it.</div>
+        <div id="embed-node-detail" class="embed-node-detail hidden">
+          <h4 id="embed-workspace-name"></h4>
+          <div class="embed-detail-section">
+            <h5>Note</h5>
+            <div id="embed-detail-raw" class="embed-detail-copy"></div>
+          </div>
+          <div class="embed-detail-section">
+            <h5>Tags</h5>
+            <div id="embed-detail-tags" class="embed-tag-list"></div>
+          </div>
+        </div>
+      </aside>
+    </main>
+    <script src="/static/embed.js" defer></script>
+  </body>
+  </html>

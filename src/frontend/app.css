@@ -1,0 +1,558 @@
+:root {
+  --paper-bg: #f2ede4;
+  --desk: #ebe4d8;
+  --panel-line: #ddd1be;
+  --text: #2a2018;
+  --muted: #7d6d5b;
+  --action: #5f5144;
+  --shadow: 0 18px 36px rgba(85, 67, 48, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(255, 251, 245, 0.9), transparent 28%),
+    linear-gradient(180deg, #f7f2ea 0%, var(--paper-bg) 100%);
+  color: var(--text);
+  font-family: "EB Garamond", Georgia, serif;
+}
+
+.app-shell {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.workspace {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.graph-panel {
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.graph-canvas {
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  cursor: grab;
+  background:
+    radial-gradient(circle, rgba(83, 65, 47, 0.18) 1px, transparent 1px),
+    linear-gradient(180deg, #f8f4ed 0%, #f1eadf 100%);
+  background-size: 14px 14px, auto;
+}
+
+#graph-svg {
+  display: block;
+  background: transparent;
+}
+
+.floating-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 320px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+}
+
+.floating-action-bar {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  background: rgba(251, 247, 240, 0.92);
+  border: 1px solid rgba(160, 140, 117, 0.28);
+  border-radius: 14px;
+  padding: 8px 12px;
+  box-shadow: 0 8px 24px rgba(70, 54, 38, 0.1);
+  backdrop-filter: blur(6px);
+  z-index: 10;
+}
+
+.fab-text-btn {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--action);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0 8px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.fab-text-btn:hover {
+  background: rgba(95, 81, 68, 0.1);
+  color: var(--text);
+}
+
+.fab-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(160, 140, 117, 0.35);
+  margin: 0 4px;
+  align-self: center;
+}
+
+.fab-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--action);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.fab-btn:hover {
+  background: rgba(95, 81, 68, 0.1);
+  color: var(--text);
+}
+
+.fab-btn.is-active {
+  color: var(--text);
+  background: rgba(95, 81, 68, 0.12);
+}
+
+.fab-btn::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(42, 32, 24, 0.88);
+  color: #f5ede0;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 13px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.fab-btn:hover::after {
+  opacity: 1;
+}
+
+.meta-bar {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 30;
+  background: rgba(251, 247, 240, 0.92);
+  border: 1px solid rgba(160, 140, 117, 0.28);
+  border-radius: 14px;
+  padding: 3px 8px;
+  box-shadow: 0 8px 24px rgba(70, 54, 38, 0.1);
+  backdrop-filter: blur(6px);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+}
+
+.meta-bar button,
+.meta-bar a,
+.meta-bar span {
+  font-size: 10px;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.action-toggle-on {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.action-status {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.workspace-island {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  background: rgba(251, 247, 240, 0.92);
+  border: 1px solid rgba(160, 140, 117, 0.28);
+  border-radius: 14px;
+  padding: 6px 12px;
+  box-shadow: 0 8px 24px rgba(70, 54, 38, 0.1);
+  backdrop-filter: blur(6px);
+}
+
+.workspace-island #workspace-select {
+  font-size: 15px;
+}
+
+button,
+.action-link,
+#workspace-select,
+#create-edge-type {
+  border: 0;
+  background: transparent;
+  padding: 4px 6px;
+  color: var(--action);
+  font: inherit;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:hover,
+.action-link:hover,
+#workspace-select:hover,
+#create-edge-type:hover {
+  color: var(--text);
+}
+
+button:disabled,
+#workspace-select:disabled,
+#create-edge-type:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--muted);
+  font-size: 16px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.node-detail {
+  display: grid;
+  align-content: start;
+}
+
+.detail-sheet {
+  width: 100%;
+  background:
+    linear-gradient(to bottom, rgba(145, 118, 89, 0.08) 1px, transparent 1px),
+    #fffdf8;
+  background-size: 100% 34px, auto;
+  border: 1px solid #eadfce;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 24px 20px;
+  display: grid;
+  gap: 24px;
+}
+
+.create-node-sheet {
+  margin-top: 12px;
+}
+
+
+.edge-selection-summary {
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.detail-section {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-section h4 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.detail-copy {
+  white-space: pre-wrap;
+  font-size: 26px;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+
+.detail-time {
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.detail-narrative {
+  white-space: pre-wrap;
+  font-size: 21px;
+  line-height: 1.55;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.create-node-form {
+  display: grid;
+  gap: 10px;
+}
+
+.create-node-form label {
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.create-node-form textarea,
+.create-node-form input {
+  width: 100%;
+  border: 1px solid #e1d3bf;
+  background: #fffaf3;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+}
+
+.create-node-form textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.create-node-form button {
+  justify-self: start;
+  padding: 0;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  padding: 6px 10px;
+  border-radius: 3px;
+  background: #f6eee2;
+  border: 1px solid #e1d3bf;
+  font-size: 15px;
+}
+
+.proposal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 28, 18, 0.12);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 20;
+}
+
+.proposal-overlay.hidden {
+  display: none !important;
+}
+
+.proposal-drawer {
+  width: min(540px, 100vw);
+  height: 100vh;
+  background: #fbf6ee;
+  border-left: 1px solid #e2d6c4;
+  box-shadow: -18px 0 40px rgba(70, 54, 38, 0.08);
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.proposal-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.proposal-list {
+  display: grid;
+  gap: 14px;
+}
+
+.proposal-card {
+  border: 1px solid #e4d8cb;
+  border-radius: 18px;
+  background: #fffaf5;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.proposal-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.proposal-body {
+  display: grid;
+  gap: 10px;
+}
+
+.proposal-node {
+  border: 1px solid #eadfd4;
+  border-radius: 14px;
+  background: #faf5ef;
+  padding: 12px;
+}
+
+.proposal-node h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.proposal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.edge {
+  fill: none;
+  stroke: rgba(108, 90, 72, 0.42);
+  stroke-linecap: round;
+}
+
+.edge.is-traced {
+  stroke: #f29f3d;
+  filter: drop-shadow(0 3px 8px rgba(242, 159, 61, 0.35));
+}
+
+.edge-label {
+  fill: rgba(108, 90, 72, 0.82);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.node-card {
+  stroke: rgba(103, 84, 62, 0.18);
+  stroke-width: 1;
+  filter: drop-shadow(0 5px 10px rgba(70, 54, 38, 0.08));
+}
+
+.node-card.pattern {
+  stroke: none;
+}
+
+.node-card.is-active {
+  stroke: rgba(72, 56, 41, 0.58);
+  stroke-width: 1.8;
+  filter: drop-shadow(0 8px 16px rgba(70, 54, 38, 0.12));
+}
+
+.node-card.is-edge-source {
+  stroke: rgba(138, 91, 34, 0.78);
+  stroke-width: 2.2;
+}
+
+.node-card.is-edge-target {
+  stroke: rgba(63, 111, 86, 0.78);
+  stroke-width: 2.2;
+}
+
+.node-card.is-trace-root {
+  stroke: #c94f2d;
+  stroke-width: 2.8;
+  filter: drop-shadow(0 10px 20px rgba(201, 79, 45, 0.24));
+}
+
+.node-card.is-traced {
+  stroke: #f29f3d;
+  stroke-width: 2.4;
+  filter: drop-shadow(0 10px 18px rgba(242, 159, 61, 0.22));
+}
+
+.node-label {
+  fill: var(--text);
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 16px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+
+/* Custom scrollbars — dashed track, solid thumb */
+.floating-panel::-webkit-scrollbar,
+.proposal-drawer::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.floating-panel::-webkit-scrollbar-track,
+.proposal-drawer::-webkit-scrollbar-track {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(139, 107, 72, 0.22) 0px,
+    rgba(139, 107, 72, 0.22) 4px,
+    transparent 4px,
+    transparent 10px
+  );
+  background-clip: padding-box;
+}
+
+.floating-panel::-webkit-scrollbar-thumb,
+.proposal-drawer::-webkit-scrollbar-thumb {
+  background: rgba(139, 107, 72, 0.0);
+  background-clip: padding-box;
+  border-top: 12px solid transparent;
+  border-bottom: 12px solid transparent;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.floating-panel:hover::-webkit-scrollbar-thumb,
+.proposal-drawer:hover::-webkit-scrollbar-thumb {
+  background: rgba(139, 107, 72, 0.55);
+  background-clip: padding-box;
+}
+
+.topic-stamp {
+  fill: rgba(96, 75, 52, 0.72);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  pointer-events: none;
+}

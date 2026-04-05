@@ -1,0 +1,62 @@
+# Seldon
+
+> External brain for your brain. See your ideas, generate new ones, find connections, find themes.
+
+Seldon is a personal knowledge graph. You save notes — via Telegram from anywhere, or directly in the app — and Seldon builds a visual graph of how your ideas connect. It uses AI to automatically detect relationships between notes and surface hidden themes.
+
+## What Seldon does
+
+- Stores notes (called nodes) in a visual force-directed graph
+- Connects notes via typed, weighted edges (supports, contradicts, expands, similar_to, led_to, etc.)
+- Pulls notes from Telegram — text your bot a thought from anywhere, poll to sync
+- Auto-generates edges between notes using tag matching, embeddings, or LLM scoring
+- Traces paths through connected ideas (path tracing)
+- Groups notes into workspaces — general (free-form) or time-aware (with a time axis)
+- Generates narrative summaries of a note's connected subgraph (requires local Ollama)
+
+## Telegram commands
+
+- Send any text → saved as a note in the active workspace
+- Prefix with `topic: ` → saved as a topic node (cluster anchor)
+- Add `#hashtags` in text → extracted as tags on the note
+- `switch to <name>` → switch to an existing workspace
+- `switch workspace to <name>` → create a new general workspace and switch
+- `switch workspace to timeaware <name>` → create a new time-aware workspace and switch
+
+## API
+
+Full OpenAPI spec available at: https://seldon.railway.app/docs
+
+Key endpoints:
+- GET  /graph-data             — full graph (nodes + edges) for a workspace
+- GET  /nodes                  — list nodes
+- POST /nodes                  — create a node
+- GET  /nodes/{id}/neighbors   — direct neighbors of a node
+- GET  /nodes/{id}/subgraph    — traversed subgraph from a root node
+- GET  /edges                  — list edges
+- POST /edges                  — create an edge manually
+- GET  /workspaces             — list workspaces
+- POST /workspaces             — create a workspace
+- POST /telegram/poll          — poll Telegram for new messages
+- GET  /link-proposals         — pending auto-generated edge proposals
+- POST /graph/actions/generate-edges — run automatic edge generation
+
+## Edge types
+
+similar_to, supports, contradicts, expands, led_to, belongs_to_topic,
+derived_from, mentions, inspired_by, part_of, reply_to
+
+## Edge creation methods (Advanced)
+
+- Tag Matcher — shared LLM-generated internal keywords
+- Embedding Matcher — cosine similarity over sentence embeddings
+- LLM Matcher — LLM scores each candidate pair directly
+- LLM Debator — three-model debate (for/against/judge)
+- Hub Matcher — clusters notes into emergent meaning hubs
+
+## Tech stack
+
+- Backend: FastAPI + SQLite + SQLAlchemy
+- Frontend: Vanilla JS + SVG (no framework)
+- AI: local Ollama (optional, for narratives and internal tag generation)
+- Graph layout: custom force-directed algorithm

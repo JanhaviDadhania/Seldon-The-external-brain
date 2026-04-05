@@ -1,0 +1,16 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[deploy.envVars]]
+name = "DATABASE_URL"
+value = "sqlite:////data/twitter_poster.db"
+
+[[deploy.envVars]]
+name = "TWITTER_POSTER_PUBLIC_URL"
+value = "https://seldon.railway.app"

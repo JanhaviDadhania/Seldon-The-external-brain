@@ -1,0 +1,152 @@
+:root {
+  --bg: #f4f0eb;
+  --panel: rgba(249, 247, 242, 0.9);
+  --detail: rgba(251, 247, 240, 0.92);
+  --text: #1a1a1a;
+  --muted: #74685c;
+  --border: rgba(142, 118, 92, 0.22);
+  --card: #fffdf8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "EB Garamond", Georgia, serif;
+}
+
+.embed-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.embed-graph-panel {
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(255,255,255,0.72), transparent 48%),
+    linear-gradient(180deg, rgba(255,255,255,0.34), rgba(244,240,235,0.76));
+  border-right: 1px solid var(--border);
+}
+
+.embed-graph-canvas,
+.embed-graph-canvas svg {
+  width: 100%;
+  height: 100vh;
+  display: block;
+}
+
+.embed-detail-panel {
+  background: var(--detail);
+  padding: 22px 18px;
+  overflow-y: auto;
+}
+
+.embed-empty-state,
+.embed-node-detail {
+  min-height: 100%;
+}
+
+.embed-empty-state {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+}
+
+.embed-node-detail h4,
+.embed-detail-section h5 {
+  margin: 0 0 10px;
+  font-weight: 500;
+}
+
+.embed-node-detail h4 {
+  font-size: 24px;
+}
+
+.embed-detail-section + .embed-detail-section {
+  margin-top: 18px;
+}
+
+.embed-detail-copy {
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.embed-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.embed-tag {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+.embed-edge {
+  fill: none;
+  stroke: rgba(96, 79, 60, 0.42);
+  stroke-linecap: round;
+}
+
+.embed-edge-label {
+  fill: rgba(83, 67, 52, 0.72);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.embed-node-card {
+  fill: var(--card);
+  stroke: rgba(128, 103, 77, 0.22);
+  stroke-width: 1;
+}
+
+.embed-node-card.is-active {
+  stroke: rgba(61, 49, 38, 0.5);
+  stroke-width: 1.5;
+}
+
+.embed-node-label {
+  fill: var(--text);
+  font-size: 15px;
+  text-anchor: start;
+}
+
+.embed-topic-stamp {
+  fill: rgba(115, 86, 57, 0.8);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+
+@media (max-width: 900px) {
+  .embed-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .embed-graph-panel {
+    min-height: 60vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .embed-graph-canvas,
+  .embed-graph-canvas svg {
+    height: 60vh;
+  }
+}
