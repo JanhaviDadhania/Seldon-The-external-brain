@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/app ./app
 COPY src/frontend ./frontend
 
-RUN mkdir -p /data
+RUN mkdir -p /data && mkdir -p /app/data
 
 EXPOSE 8000
 
