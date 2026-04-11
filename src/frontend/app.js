@@ -746,6 +746,14 @@ function startNodeDrag(e, node) {
   dragOffsetY = svgY - pos.y;
 }
 
+async function saveNodePosition(nodeId, x, y) {
+  await fetch(withWorkspace(`/nodes/${nodeId}`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ metadata_json: { ui_position: { x, y } } }),
+  });
+}
+
 function applyDragPosition(nodeId, x, y) {
   nodePositions.set(nodeId, { x, y });
   const group = svg.querySelector(`g[data-node-id="${nodeId}"]`);
@@ -774,13 +782,13 @@ function renderGraph(data) {
   const baseContentHeight = timeline ? timeline.contentHeight : height;
   const layoutNodes = timeline ? timeline.nodes : forceLayout(data.nodes, data.edges, baseContentWidth, baseContentHeight);
 
-  const hasStoredPositions = nodePositions.size > 0;
+  const hasStoredPositions = nodePositions.size > 0 || data.nodes.some((n) => n.ui_position);
   let contentWidth = baseContentWidth;
   let contentHeight = baseContentHeight;
   if (!timeline && layoutNodes.length > 0) {
     const pad = 140;
     if (!hasStoredPositions) {
-      // First render: normalize bounding box then store positions.
+      // Fresh load, no saved positions: normalize bounding box and store.
       const minX = Math.min(...layoutNodes.map((n) => n.x)) - pad;
       const maxX = Math.max(...layoutNodes.map((n) => n.x)) + pad;
       const minY = Math.min(...layoutNodes.map((n) => n.y)) - pad;
@@ -790,12 +798,16 @@ function renderGraph(data) {
       layoutNodes.forEach((n) => { n.x -= minX; n.y -= minY; });
       layoutNodes.forEach((n) => nodePositions.set(n.id, { x: n.x, y: n.y }));
     } else {
-      // Subsequent renders: use stored positions; seed any brand-new nodes.
+      // Use in-memory positions, fall back to db-saved positions, then force layout for new nodes.
       layoutNodes.forEach((n) => {
         if (nodePositions.has(n.id)) {
           const pos = nodePositions.get(n.id);
           n.x = pos.x;
           n.y = pos.y;
+        } else if (n.ui_position) {
+          n.x = n.ui_position.x;
+          n.y = n.ui_position.y;
+          nodePositions.set(n.id, { x: n.x, y: n.y });
         } else {
           nodePositions.set(n.id, { x: n.x, y: n.y });
         }
@@ -1373,6 +1385,8 @@ document.addEventListener("mouseup", () => {
   if (dragNodeId && dragHasMoved) {
     justDragged = true;
     graphCanvas.style.cursor = "";
+    const pos = nodePositions.get(dragNodeId);
+    if (pos) saveNodePosition(dragNodeId, pos.x, pos.y);
     renderGraph(currentData);
   }
   dragNodeId = null;

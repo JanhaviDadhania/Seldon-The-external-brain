@@ -296,6 +296,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "time": (node.metadata_json.get("time", {}) or {}),
                     "tags": node.tags,
                     "linker_tags": (node.metadata_json.get("linker_tags", {}) or {}),
+                    "ui_position": node.metadata_json.get("ui_position") or None,
                     "source": node.source,
                     "status": node.status,
                 }
@@ -735,7 +736,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 )
             node.metadata_json = merge_time_metadata(node.metadata_json, updates["time_label"])
         elif "metadata_json" in updates:
-            node.metadata_json = updates["metadata_json"]
+            merged = dict(node.metadata_json)
+            merged.update(updates["metadata_json"])
+            node.metadata_json = merged
 
         db.commit()
         db.refresh(node)
