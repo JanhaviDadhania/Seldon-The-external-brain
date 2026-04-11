@@ -618,3 +618,147 @@ button:disabled,
   text-transform: uppercase;
   pointer-events: none;
 }
+
+/* ===== DARK THEME ===== */
+
+[data-theme="dark"] {
+  --paper-bg: #161210;
+  --desk: #1c1814;
+  --panel-line: #2e271e;
+  --text: #e2d5c3;
+  --muted: #7a6a58;
+  --action: #c8a87a;
+  --shadow: 0 18px 36px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at top left, rgba(40, 30, 15, 0.9), transparent 28%),
+    linear-gradient(180deg, #1a1612 0%, #161210 100%);
+}
+
+[data-theme="dark"] .graph-canvas {
+  background:
+    radial-gradient(circle, rgba(160, 130, 90, 0.1) 1px, transparent 1px),
+    linear-gradient(180deg, #1a1610 0%, #141208 100%);
+  background-size: 14px 14px, auto;
+}
+
+[data-theme="dark"] .floating-action-bar,
+[data-theme="dark"] .workspace-island,
+[data-theme="dark"] .meta-bar {
+  background: rgba(22, 18, 12, 0.94);
+  border-color: rgba(90, 70, 45, 0.28);
+}
+
+[data-theme="dark"] .detail-sheet {
+  background:
+    linear-gradient(to bottom, rgba(90, 70, 45, 0.1) 1px, transparent 1px),
+    #1a1612;
+  background-size: 100% 34px, auto;
+  border-color: #28201a;
+}
+
+[data-theme="dark"] .proposal-drawer {
+  background: #181410;
+  border-left-color: #28201a;
+}
+
+[data-theme="dark"] .proposal-card {
+  background: #1c1814;
+  border-color: #2a221a;
+}
+
+[data-theme="dark"] .proposal-node {
+  background: #181410;
+  border-color: #241c16;
+}
+
+[data-theme="dark"] .proposal-overlay {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .create-node-form textarea,
+[data-theme="dark"] .create-node-form input {
+  background: #1c1914;
+  border-color: #2e271e;
+}
+
+[data-theme="dark"] .tag {
+  background: #211d15;
+  border-color: #2e271e;
+}
+
+[data-theme="dark"] .tag-add input {
+  border-bottom-color: rgba(90, 70, 45, 0.4);
+}
+
+[data-theme="dark"] .detail-edit:focus {
+  outline-color: rgba(150, 120, 80, 0.4);
+}
+
+[data-theme="dark"] .node-card {
+  stroke: rgba(150, 120, 80, 0.18);
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.25));
+}
+
+[data-theme="dark"] .node-card.is-active {
+  stroke: rgba(200, 168, 110, 0.65);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+}
+
+[data-theme="dark"] .node-card.is-edge-source {
+  stroke: rgba(200, 140, 50, 0.85);
+}
+
+[data-theme="dark"] .node-card.is-edge-target {
+  stroke: rgba(80, 160, 110, 0.85);
+}
+
+[data-theme="dark"] .node-card.is-trace-root {
+  stroke: #e05530;
+  filter: drop-shadow(0 10px 20px rgba(224, 85, 48, 0.3));
+}
+
+[data-theme="dark"] .node-card.is-traced {
+  stroke: #e8902a;
+  filter: drop-shadow(0 10px 18px rgba(232, 144, 42, 0.28));
+}
+
+[data-theme="dark"] .edge {
+  stroke: rgba(150, 120, 80, 0.35);
+}
+
+[data-theme="dark"] .edge.is-traced {
+  stroke: #e8902a;
+  filter: drop-shadow(0 3px 8px rgba(232, 144, 42, 0.4));
+}
+
+[data-theme="dark"] .edge-label {
+  fill: rgba(160, 130, 85, 0.72);
+}
+
+[data-theme="dark"] .topic-stamp {
+  fill: rgba(180, 150, 100, 0.65);
+}
+
+[data-theme="dark"] .fab-btn::after {
+  background: rgba(220, 200, 170, 0.94);
+  color: #161210;
+}
+
+[data-theme="dark"] .floating-panel::-webkit-scrollbar-track,
+[data-theme="dark"] .proposal-drawer::-webkit-scrollbar-track {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(100, 80, 50, 0.22) 0px,
+    rgba(100, 80, 50, 0.22) 4px,
+    transparent 4px,
+    transparent 10px
+  );
+}
+
+[data-theme="dark"] .floating-panel:hover::-webkit-scrollbar-thumb,
+[data-theme="dark"] .proposal-drawer:hover::-webkit-scrollbar-thumb {
+  background: rgba(100, 80, 50, 0.55);
+}

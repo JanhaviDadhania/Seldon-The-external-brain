@@ -10,6 +10,7 @@ const addNodeSheet = document.getElementById("add-node-sheet");
 const reviewLinksButton = document.getElementById("review-links-button");
 const developerModeButton = document.getElementById("developer-mode-button");
 const developerModeStatus = document.getElementById("developer-mode-status");
+const themeToggleButton = document.getElementById("theme-toggle-button");
 const emptyState = document.getElementById("empty-state");
 const nodeDetail = document.getElementById("node-detail");
 const detailRaw = document.getElementById("detail-raw");
@@ -40,6 +41,7 @@ let activeNodeId = null;
 let currentData = { nodes: [], edges: [] };
 let setupReady = false;
 let developerMode = window.localStorage.getItem("developerMode") === "on";
+let currentTheme = window.localStorage.getItem("theme") || "light";
 
 // Token-based auth — read from URL param on load, persist in localStorage
 (function initToken() {
@@ -86,6 +88,15 @@ const NOTE_BACKGROUNDS = [
   { base: "#f0e5d5", overlay: "note-grid" },
   { base: "#f9f4ec", overlay: "note-lines" },
   { base: "#f6efe5", overlay: "note-grid" },
+];
+
+const NOTE_BACKGROUNDS_DARK = [
+  { base: "#1e1a13", overlay: null },
+  { base: "#1c1910", overlay: "note-lines" },
+  { base: "#1a1710", overlay: null },
+  { base: "#18150e", overlay: "note-grid" },
+  { base: "#1d1b11", overlay: "note-lines" },
+  { base: "#1b180f", overlay: "note-grid" },
 ];
 
 function setButtonsDisabled(disabled) {
@@ -315,6 +326,18 @@ function renderTags(values, emptyLabel) {
       detailTags.appendChild(tag);
     }
   });
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = currentTheme === "dark" ? "dark" : "";
+  themeToggleButton.textContent = currentTheme === "dark" ? "Light" : "Dark";
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === "dark" ? "light" : "dark";
+  window.localStorage.setItem("theme", currentTheme);
+  applyTheme();
+  if (currentData.nodes.length > 0) renderGraph(currentData);
 }
 
 function updateDeveloperModeButton() {
@@ -643,7 +666,9 @@ function getNoteSize(node) {
 }
 
 function getNoteStyle(node) {
-  return NOTE_BACKGROUNDS[node.id % NOTE_BACKGROUNDS.length];
+  const isDark = document.documentElement.dataset.theme === "dark";
+  const set = isDark ? NOTE_BACKGROUNDS_DARK : NOTE_BACKGROUNDS;
+  return set[node.id % set.length];
 }
 
 function buildSlackPath(from, to) {
@@ -1419,6 +1444,7 @@ toggleAddNodeButton.addEventListener("click", () => {
 });
 reviewLinksButton.addEventListener("click", openProposalDrawer);
 developerModeButton.addEventListener("click", toggleDeveloperMode);
+themeToggleButton.addEventListener("click", toggleTheme);
 workspaceSelect.addEventListener("change", () => {
   graphNeedsCenter = true;
   handleWorkspaceChange().catch((error) => {
@@ -1449,6 +1475,7 @@ proposalOverlay.addEventListener("click", (event) => {
 });
 window.addEventListener("resize", () => renderGraph(currentData));
 window.addEventListener("DOMContentLoaded", () => {
+  applyTheme();
   updateDeveloperModeButton();
   updateNarrativeModeButton();
   updatePathTracingButton();
