@@ -5,10 +5,7 @@ const pollTelegramButton = document.getElementById("poll-telegram-button");
 const generateEdgesButton = document.getElementById("generate-edges-button");
 const narrativeModeButton = document.getElementById("narrative-mode-button");
 const pathTracingButton = document.getElementById("path-tracing-button");
-const edgeModeButton = document.getElementById("edge-mode-button");
-const cancelEdgeSelectionButton = document.getElementById("cancel-edge-selection-button");
 const toggleAddNodeButton = document.getElementById("toggle-add-node-button");
-const toggleEdgeFormButton = document.getElementById("toggle-edge-form-button");
 const addNodeSheet = document.getElementById("add-node-sheet");
 const reviewLinksButton = document.getElementById("review-links-button");
 const developerModeButton = document.getElementById("developer-mode-button");
@@ -59,7 +56,6 @@ const authToken = window.localStorage.getItem("authToken");
 let currentWorkspaceId = Number(window.localStorage.getItem("workspaceId")) || null;
 let currentWorkspaceName = null;
 let currentWorkspaceType = null;
-let edgeMode = false;
 let edgeSourceNodeId = null;
 let edgeTargetNodeId = null;
 let graphZoom = Number(window.localStorage.getItem("graphZoom")) || 1;
@@ -91,7 +87,6 @@ function setButtonsDisabled(disabled) {
   generateEdgesButton.disabled = disabled;
   narrativeModeButton.disabled = disabled;
   pathTracingButton.disabled = disabled;
-  edgeModeButton.disabled = disabled;
   reviewLinksButton.disabled = disabled;
   createNodeSubmit.disabled = disabled;
   createEdgeSubmit.disabled = disabled;
@@ -207,12 +202,7 @@ function nodePreview(nodeId) {
 }
 
 function updateEdgeSelectionUi() {
-  edgeModeButton.setAttribute("aria-pressed", edgeMode ? "true" : "false");
-  toggleEdgeFormButton.textContent = edgeMode ? "− Create Edge" : "+ Create Edge";
-  toggleEdgeFormButton.classList.toggle("action-toggle-on", edgeMode);
-  cancelEdgeSelectionButton.classList.toggle("hidden", !edgeMode && !edgeSourceNodeId && !edgeTargetNodeId);
-
-  if (!edgeMode && !edgeSourceNodeId && !edgeTargetNodeId) {
+  if (!edgeSourceNodeId && !edgeTargetNodeId) {
     edgeFormSheet.classList.add("hidden");
     edgeSelectionSummary.textContent = "Select two nodes.";
     return;
@@ -225,14 +215,13 @@ function updateEdgeSelectionUi() {
   } else if (!edgeTargetNodeId) {
     edgeSelectionSummary.textContent = `Source: ${nodePreview(edgeSourceNodeId)}. Click the second node to set the target.`;
   } else {
-    edgeSelectionSummary.textContent = `Source: ${nodePreview(edgeSourceNodeId)} -> Target: ${nodePreview(edgeTargetNodeId)}`;
+    edgeSelectionSummary.textContent = `Source: ${nodePreview(edgeSourceNodeId)} → Target: ${nodePreview(edgeTargetNodeId)}`;
   }
 }
 
-function resetEdgeSelection({ keepMode = false } = {}) {
+function resetEdgeSelection() {
   edgeSourceNodeId = null;
   edgeTargetNodeId = null;
-  if (!keepMode) edgeMode = false;
   updateEdgeSelectionUi();
 }
 
@@ -716,11 +705,6 @@ function handleNodeSelection(node) {
     return;
   }
 
-  if (!edgeMode) {
-    renderDetail(node);
-    return;
-  }
-
   if (!edgeSourceNodeId) {
     edgeSourceNodeId = node.id;
     edgeTargetNodeId = null;
@@ -1002,17 +986,6 @@ function toggleDeveloperMode() {
   updateDeveloperModeButton();
   const activeNode = getNodeById(activeNodeId);
   if (activeNode) renderDetail(activeNode);
-}
-
-function toggleEdgeMode() {
-  edgeMode = !edgeMode;
-  if (!edgeMode) {
-    resetEdgeSelection();
-    return;
-  }
-  edgeSourceNodeId = null;
-  edgeTargetNodeId = null;
-  updateEdgeSelectionUi();
 }
 
 function togglePathTracingMode() {
@@ -1342,13 +1315,8 @@ graphCanvas.addEventListener("wheel", (e) => {
 }, { passive: false });
 narrativeModeButton.addEventListener("click", toggleNarrativeMode);
 pathTracingButton.addEventListener("click", togglePathTracingMode);
-edgeModeButton.addEventListener("click", toggleEdgeMode);
-cancelEdgeSelectionButton.addEventListener("click", () => resetEdgeSelection());
 toggleAddNodeButton.addEventListener("click", () => {
   addNodeSheet.classList.toggle("hidden");
-});
-toggleEdgeFormButton.addEventListener("click", () => {
-  toggleEdgeMode();
 });
 reviewLinksButton.addEventListener("click", openProposalDrawer);
 developerModeButton.addEventListener("click", toggleDeveloperMode);
