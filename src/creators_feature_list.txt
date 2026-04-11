@@ -107,14 +107,14 @@ Topic nodes:
 When you add a note (via app or Telegram), edges are not created automatically.
 You create edges two ways:
 
-  Manual:
-    Click "+ Create Edge" on the floating island.
-    Select two nodes on the graph (one as source, one as target).
-    Choose an edge type and a weight (0 to 1 — how strong the connection is,
-    default 0.5). Save.
+  Manual (always on):
+    Click any node on the graph — it becomes the edge source (highlighted).
+    Click a second node — it becomes the target. The edge form appears in the
+    top-right panel. Choose an edge type and weight (0 to 1, default 0.5).
+    Save. To cancel, click the source node again.
 
   Automatic (via Generate Edges):
-    Click the Generate Edges button (magic wand icon on the floating island).
+    Click the Generate Edges button (star icon on the floating island).
     The app runs one or more edge creation methods (see section 12) across
     your notes and proposes edges. You review and accept or reject them.
 
@@ -123,11 +123,14 @@ Edge types available:
   belongs_to_topic, derived_from, mentions, inspired_by, part_of, reply_to
 
 
-9. VIEWING A NOTE
------------------
+9. VIEWING AND EDITING A NOTE
+-----------------------------
 Click any node on the graph. A floating card appears at the top right showing:
-  - The full note text
-  - Tags attached to the note (If developer mode is On, tags shown are machine generated tags which were used in automatic edge creation.)
+  - The full note text (editable — click to type, auto-expands to fit content)
+  - Tags attached to the note, each with an × button to remove them.
+    Type a tag name in the "add tag" field and press Enter to add a new one.
+    (In Developer Mode, linker tags are shown read-only instead.)
+  - A Save button — click to persist text and tag changes to the database.
   - Narrative (if generated — see section 14)
 
 
@@ -258,15 +261,30 @@ Hidden in the deployed version because Ollama is not available in the cloud.
   - Two-finger drag on trackpad: pan the graph
   - Pinch (ctrl + scroll): zoom in and out, centered on cursor
   - Click a node: opens the note card (top right)
+  - Click and drag a node: move it anywhere on the canvas. Edges stretch
+    and follow. Position is saved to the database and restored on refresh.
   - Graph starts centered on load
 
 
 17. NODE LAYOUT
 ---------------
-  - General workspaces: force-directed layout. Notes repel each other,
-    edges pull connected notes together. The graph settles into clusters.
+  - General workspaces: force-directed layout on first load. Notes repel each
+    other, edges pull connected notes together. Once you drag a node, its
+    position is saved and the force layout no longer moves it.
   - Time-aware workspaces: horizontal timeline layout. Notes are placed
     along a time axis by their date label.
+
+
+18. THEMES
+----------
+Click the theme toggle button (bottom right, next to Developer Mode) to cycle
+through three visual themes:
+
+  - Light: warm parchment background (default)
+  - Dark: deep warm brown — easy on the eyes in low light
+  - Colorful: illustrated landscape background with a soft blur
+
+Theme preference is saved and restored on every visit.
 
 
 THINGS NOT YET SUPPORTED
