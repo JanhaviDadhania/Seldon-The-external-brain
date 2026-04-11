@@ -35,6 +35,9 @@ const createEdgeSubmit = document.getElementById("create-edge-submit");
 const proposalOverlay = document.getElementById("proposal-overlay");
 const closeProposalsButton = document.getElementById("close-proposals-button");
 const proposalList = document.getElementById("proposal-list");
+const detailSaveButton = document.getElementById("detail-save-button");
+const detailTagInput = document.getElementById("detail-tag-input");
+const detailTagAdd = document.getElementById("detail-tag-add");
 
 let activeNodeId = null;
 let currentData = { nodes: [], edges: [] };
@@ -278,22 +281,43 @@ function activeTagValues(node) {
   ];
 }
 
+function makeEditableTag(value) {
+  const tag = document.createElement("span");
+  tag.className = "tag";
+  tag.dataset.tag = value;
+  tag.textContent = value;
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "tag-remove";
+  remove.textContent = "×";
+  remove.addEventListener("click", () => tag.remove());
+  tag.appendChild(remove);
+  return tag;
+}
+
 function renderTags(values, emptyLabel) {
   detailTags.innerHTML = "";
+  const editable = !developerMode;
 
   if (!values || values.length === 0) {
-    const tag = document.createElement("span");
-    tag.className = "tag";
-    tag.textContent = emptyLabel;
-    detailTags.appendChild(tag);
+    if (!editable) {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = emptyLabel;
+      detailTags.appendChild(tag);
+    }
     return;
   }
 
   values.forEach((value) => {
-    const tag = document.createElement("span");
-    tag.className = "tag";
-    tag.textContent = value;
-    detailTags.appendChild(tag);
+    if (editable) {
+      detailTags.appendChild(makeEditableTag(value));
+    } else {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = value;
+      detailTags.appendChild(tag);
+    }
   });
 }
 
@@ -638,9 +662,13 @@ function renderDetail(node) {
   activeNodeId = node.id;
   emptyState.classList.add("hidden");
   nodeDetail.classList.remove("hidden");
-  detailRaw.textContent = node.raw_text;
+  detailRaw.value = node.raw_text;
+  detailRaw.style.height = "auto";
+  detailRaw.style.height = `${detailRaw.scrollHeight}px`;
   detailTagsHeading.textContent = developerMode ? "Linker Tags" : "Tags";
   renderTags(activeTagValues(node), developerMode ? "no linker tags" : "untagged");
+  detailTagAdd.classList.toggle("hidden", developerMode);
+  detailSaveButton.classList.toggle("hidden", developerMode);
   const hasNarrative = narrativeNodeId === node.id && (narrativeLoading || narrativeError || narrativeText);
   detailNarrativeSection.classList.toggle("hidden", !hasNarrative);
   if (hasNarrative) {
@@ -1260,6 +1288,36 @@ async function createEdgeFromForm(event) {
   }
 }
 
+async function saveNodeEdits(nodeId) {
+  const newText = detailRaw.value.trim();
+  if (!newText) return;
+
+  const tags = Array.from(detailTags.querySelectorAll(".tag[data-tag]")).map((el) => el.dataset.tag);
+  const body = { raw_text: newText, tags };
+
+  detailSaveButton.disabled = true;
+  try {
+    const response = await fetch(withWorkspace(`/nodes/${nodeId}`), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.detail || `Save failed: ${response.status}`);
+    }
+    await loadGraph();
+    const updated = getNodeById(nodeId);
+    if (updated) renderDetail(updated);
+  } catch (error) {
+    emptyState.classList.remove("hidden");
+    nodeDetail.classList.add("hidden");
+    emptyState.textContent = error.message;
+  } finally {
+    detailSaveButton.disabled = false;
+  }
+}
+
 pollTelegramButton.addEventListener("click", pollTelegram);
 generateEdgesButton.addEventListener("click", generateEdges);
 graphCanvas.addEventListener("wheel", (e) => {
@@ -1305,6 +1363,20 @@ workspaceSelect.addEventListener("change", () => {
 createNodeForm.addEventListener("submit", createNodeFromForm);
 createEdgeForm.addEventListener("submit", createEdgeFromForm);
 closeProposalsButton.addEventListener("click", closeProposalDrawer);
+detailSaveButton.addEventListener("click", () => { if (activeNodeId) saveNodeEdits(activeNodeId); });
+detailRaw.addEventListener("input", () => {
+  detailRaw.style.height = "auto";
+  detailRaw.style.height = `${detailRaw.scrollHeight}px`;
+});
+detailTagInput.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const value = detailTagInput.value.trim().toLowerCase().replace(/^#/, "");
+  if (!value) return;
+  if (detailTags.querySelector(`[data-tag="${value}"]`)) { detailTagInput.value = ""; return; }
+  detailTags.appendChild(makeEditableTag(value));
+  detailTagInput.value = "";
+});
 proposalOverlay.addEventListener("click", (event) => {
   if (event.target === proposalOverlay) closeProposalDrawer();
 });

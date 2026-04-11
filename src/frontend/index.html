@@ -34,12 +34,16 @@
               <div class="detail-sheet">
                 <div class="detail-section">
                   <h4>Note</h4>
-                  <div id="detail-raw" class="detail-copy"></div>
+                  <textarea id="detail-raw" class="detail-copy detail-edit"></textarea>
                 </div>
                 <div class="detail-section">
                   <h4 id="detail-tags-heading">Tags</h4>
                   <div id="detail-tags" class="tag-list"></div>
+                  <div id="detail-tag-add" class="tag-add hidden">
+                    <input id="detail-tag-input" type="text" placeholder="+ add tag" />
+                  </div>
                 </div>
+                <button id="detail-save-button" type="button" class="detail-save hidden">Save</button>
                 <div id="detail-narrative-section" class="detail-section hidden">
                   <h4>Narrative</h4>
                   <div id="detail-narrative" class="detail-narrative"></div>

@@ -548,6 +548,68 @@ button:disabled,
   background-clip: padding-box;
 }
 
+.detail-edit {
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  font: inherit;
+  font-size: 26px;
+  line-height: 1.38;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  padding: 0;
+  outline: none;
+}
+
+.detail-edit:focus {
+  outline: 1px solid rgba(95, 81, 68, 0.28);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.tag-remove {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 0 0 5px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.tag-remove:hover {
+  color: var(--text);
+}
+
+.tag-add {
+  margin-top: 6px;
+}
+
+.tag-add input {
+  border: none;
+  border-bottom: 1px solid rgba(160, 140, 117, 0.4);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  padding: 2px 4px;
+  width: 100%;
+  outline: none;
+}
+
+.tag-add input::placeholder {
+  color: var(--muted);
+}
+
+.detail-save {
+  justify-self: start;
+  padding: 0;
+  font-size: 15px;
+}
+
 .topic-stamp {
   fill: rgba(96, 75, 52, 0.72);
   font-family: "IBM Plex Mono", monospace;
