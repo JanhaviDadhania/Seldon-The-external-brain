@@ -72,6 +72,13 @@ let tracedRootNodeId = null;
 let tracedNodeIds = new Set();
 let tracedEdgeIds = new Set();
 
+const nodePositions = new Map();
+let dragNodeId = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let dragHasMoved = false;
+let justDragged = false;
+
 const NOTE_BACKGROUNDS = [
   { base: "#fffdf8", overlay: null },
   { base: "#f8f2e9", overlay: "note-lines" },
@@ -726,6 +733,32 @@ function handleNodeSelection(node) {
   updateEdgeSelectionUi();
 }
 
+function startNodeDrag(e, node) {
+  if (e.button !== 0) return;
+  e.stopPropagation();
+  dragNodeId = node.id;
+  dragHasMoved = false;
+  const rect = graphCanvas.getBoundingClientRect();
+  const svgX = (e.clientX - rect.left - panX) / graphZoom;
+  const svgY = (e.clientY - rect.top - panY) / graphZoom;
+  const pos = nodePositions.get(node.id) || { x: node.x, y: node.y };
+  dragOffsetX = svgX - pos.x;
+  dragOffsetY = svgY - pos.y;
+}
+
+function applyDragPosition(nodeId, x, y) {
+  nodePositions.set(nodeId, { x, y });
+  const group = svg.querySelector(`g[data-node-id="${nodeId}"]`);
+  if (group) group.setAttribute("transform", `translate(${x} ${y})`);
+  svg.querySelectorAll(`path[data-edge-from="${nodeId}"], path[data-edge-to="${nodeId}"]`).forEach((path) => {
+    const fromId = Number(path.dataset.edgeFrom);
+    const toId = Number(path.dataset.edgeTo);
+    const fromPos = nodePositions.get(fromId);
+    const toPos = nodePositions.get(toId);
+    if (fromPos && toPos) path.setAttribute("d", buildSlackPath(fromPos, toPos));
+  });
+}
+
 function renderGraph(data) {
   currentData = data;
   clearSvg();
@@ -741,17 +774,37 @@ function renderGraph(data) {
   const baseContentHeight = timeline ? timeline.contentHeight : height;
   const layoutNodes = timeline ? timeline.nodes : forceLayout(data.nodes, data.edges, baseContentWidth, baseContentHeight);
 
+  const hasStoredPositions = nodePositions.size > 0;
   let contentWidth = baseContentWidth;
   let contentHeight = baseContentHeight;
   if (!timeline && layoutNodes.length > 0) {
     const pad = 140;
-    const minX = Math.min(...layoutNodes.map((n) => n.x)) - pad;
-    const maxX = Math.max(...layoutNodes.map((n) => n.x)) + pad;
-    const minY = Math.min(...layoutNodes.map((n) => n.y)) - pad;
-    const maxY = Math.max(...layoutNodes.map((n) => n.y)) + pad;
-    contentWidth = Math.max(width, maxX - minX);
-    contentHeight = Math.max(height, maxY - minY);
-    layoutNodes.forEach((n) => { n.x -= minX; n.y -= minY; });
+    if (!hasStoredPositions) {
+      // First render: normalize bounding box then store positions.
+      const minX = Math.min(...layoutNodes.map((n) => n.x)) - pad;
+      const maxX = Math.max(...layoutNodes.map((n) => n.x)) + pad;
+      const minY = Math.min(...layoutNodes.map((n) => n.y)) - pad;
+      const maxY = Math.max(...layoutNodes.map((n) => n.y)) + pad;
+      contentWidth = Math.max(width, maxX - minX);
+      contentHeight = Math.max(height, maxY - minY);
+      layoutNodes.forEach((n) => { n.x -= minX; n.y -= minY; });
+      layoutNodes.forEach((n) => nodePositions.set(n.id, { x: n.x, y: n.y }));
+    } else {
+      // Subsequent renders: use stored positions; seed any brand-new nodes.
+      layoutNodes.forEach((n) => {
+        if (nodePositions.has(n.id)) {
+          const pos = nodePositions.get(n.id);
+          n.x = pos.x;
+          n.y = pos.y;
+        } else {
+          nodePositions.set(n.id, { x: n.x, y: n.y });
+        }
+      });
+      const maxX = Math.max(...layoutNodes.map((n) => n.x)) + pad;
+      const maxY = Math.max(...layoutNodes.map((n) => n.y)) + pad;
+      contentWidth = Math.max(width, maxX);
+      contentHeight = Math.max(height, maxY);
+    }
   }
 
   svg.setAttribute("viewBox", `0 0 ${contentWidth} ${contentHeight}`);
@@ -784,6 +837,8 @@ function renderGraph(data) {
       d: pathD,
       class: "edge",
       "stroke-width": Math.max(1.2, edge.weight * 2.6),
+      "data-edge-from": edge.from_node_id,
+      "data-edge-to": edge.to_node_id,
     });
     if (tracedEdgeIds.has(edge.id)) line.classList.add("is-traced");
     svg.appendChild(line);
@@ -802,6 +857,7 @@ function renderGraph(data) {
     const group = svgEl("g", {
       transform: `translate(${node.x} ${node.y})`,
       style: "cursor:pointer",
+      "data-node-id": node.id,
     });
 
     const size = getNoteSize(node);
@@ -866,7 +922,11 @@ function renderGraph(data) {
     });
 
     group.appendChild(label);
-    group.addEventListener("click", () => handleNodeSelection(node));
+    group.addEventListener("mousedown", (e) => startNodeDrag(e, node));
+    group.addEventListener("click", () => {
+      if (justDragged) { justDragged = false; return; }
+      handleNodeSelection(node);
+    });
     svg.appendChild(group);
   });
 
@@ -1293,6 +1353,31 @@ async function saveNodeEdits(nodeId) {
 
 pollTelegramButton.addEventListener("click", pollTelegram);
 generateEdgesButton.addEventListener("click", generateEdges);
+graphCanvas.addEventListener("mousemove", (e) => {
+  if (!dragNodeId) return;
+  const rect = graphCanvas.getBoundingClientRect();
+  const svgX = (e.clientX - rect.left - panX) / graphZoom;
+  const svgY = (e.clientY - rect.top - panY) / graphZoom;
+  const newX = svgX - dragOffsetX;
+  const newY = svgY - dragOffsetY;
+  if (!dragHasMoved) {
+    const old = nodePositions.get(dragNodeId) || { x: 0, y: 0 };
+    if (Math.hypot(newX - old.x, newY - old.y) > 4) dragHasMoved = true;
+  }
+  if (dragHasMoved) {
+    graphCanvas.style.cursor = "grabbing";
+    applyDragPosition(dragNodeId, newX, newY);
+  }
+});
+document.addEventListener("mouseup", () => {
+  if (dragNodeId && dragHasMoved) {
+    justDragged = true;
+    graphCanvas.style.cursor = "";
+    renderGraph(currentData);
+  }
+  dragNodeId = null;
+  dragHasMoved = false;
+});
 graphCanvas.addEventListener("wheel", (e) => {
   e.preventDefault();
   const rect = graphCanvas.getBoundingClientRect();
@@ -1376,6 +1461,7 @@ async function handleWorkspaceChange() {
   currentWorkspaceName = payload.display_name || payload.name;
   currentWorkspaceType = payload.type;
   window.localStorage.setItem("workspaceId", String(currentWorkspaceId));
+  nodePositions.clear();
   resetEdgeSelection();
   narrativeNodeId = null;
   narrativeText = "";
