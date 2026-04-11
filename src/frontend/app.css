@@ -619,6 +619,12 @@ button:disabled,
   pointer-events: none;
 }
 
+/* ===== COLORFUL THEME ===== */
+
+[data-theme="colorful"] .graph-canvas {
+  background: url('/static/boydog.png') center bottom / cover no-repeat;
+}
+
 /* ===== DARK THEME ===== */
 
 [data-theme="dark"] {

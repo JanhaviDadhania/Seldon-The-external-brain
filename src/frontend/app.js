@@ -99,6 +99,15 @@ const NOTE_BACKGROUNDS_DARK = [
   { base: "#1b180f", overlay: "note-grid" },
 ];
 
+const NOTE_BACKGROUNDS_COLORFUL = [
+  { base: "rgba(255, 253, 248, 0.84)", overlay: null },
+  { base: "rgba(248, 242, 233, 0.84)", overlay: "note-lines" },
+  { base: "rgba(245, 236, 222, 0.84)", overlay: null },
+  { base: "rgba(240, 229, 213, 0.84)", overlay: "note-grid" },
+  { base: "rgba(249, 244, 236, 0.84)", overlay: "note-lines" },
+  { base: "rgba(246, 239, 229, 0.84)", overlay: "note-grid" },
+];
+
 function setButtonsDisabled(disabled) {
   workspaceSelect.disabled = disabled;
   pollTelegramButton.disabled = disabled;
@@ -328,13 +337,17 @@ function renderTags(values, emptyLabel) {
   });
 }
 
+const THEME_CYCLE = ["light", "dark", "colorful"];
+const THEME_NEXT_LABEL = { light: "Dark", dark: "Colorful", colorful: "Light" };
+
 function applyTheme() {
-  document.documentElement.dataset.theme = currentTheme === "dark" ? "dark" : "";
-  themeToggleButton.textContent = currentTheme === "dark" ? "Light" : "Dark";
+  document.documentElement.dataset.theme = currentTheme === "light" ? "" : currentTheme;
+  themeToggleButton.textContent = THEME_NEXT_LABEL[currentTheme] || "Dark";
 }
 
 function toggleTheme() {
-  currentTheme = currentTheme === "dark" ? "light" : "dark";
+  const idx = THEME_CYCLE.indexOf(currentTheme);
+  currentTheme = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
   window.localStorage.setItem("theme", currentTheme);
   applyTheme();
   if (currentData.nodes.length > 0) renderGraph(currentData);
@@ -666,8 +679,10 @@ function getNoteSize(node) {
 }
 
 function getNoteStyle(node) {
-  const isDark = document.documentElement.dataset.theme === "dark";
-  const set = isDark ? NOTE_BACKGROUNDS_DARK : NOTE_BACKGROUNDS;
+  const theme = document.documentElement.dataset.theme;
+  const set = theme === "dark" ? NOTE_BACKGROUNDS_DARK
+    : theme === "colorful" ? NOTE_BACKGROUNDS_COLORFUL
+    : NOTE_BACKGROUNDS;
   return set[node.id % set.length];
 }
 
