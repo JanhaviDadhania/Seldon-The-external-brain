@@ -11,6 +11,7 @@ const reviewLinksButton = document.getElementById("review-links-button");
 const developerModeButton = document.getElementById("developer-mode-button");
 const developerModeStatus = document.getElementById("developer-mode-status");
 const themeToggleButton = document.getElementById("theme-toggle-button");
+const exportGraphButton = document.getElementById("export-graph-button");
 const emptyState = document.getElementById("empty-state");
 const nodeDetail = document.getElementById("node-detail");
 const detailRaw = document.getElementById("detail-raw");
@@ -1461,6 +1462,22 @@ toggleAddNodeButton.addEventListener("click", () => {
   addNodeSheet.classList.toggle("hidden");
 });
 reviewLinksButton.addEventListener("click", openProposalDrawer);
+exportGraphButton.addEventListener("click", async () => {
+  const parts = ["graph-data/export"];
+  const qs = [];
+  if (authToken) qs.push(`token=${encodeURIComponent(authToken)}`);
+  if (currentWorkspaceId) qs.push(`workspace_id=${encodeURIComponent(String(currentWorkspaceId))}`);
+  if (qs.length) parts.push(qs.join("&"));
+  const resp = await fetch(`/${parts[0]}?${parts[1] || ""}`);
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const name = (currentWorkspaceName || "graph").toLowerCase().replace(/\s+/g, "-");
+  a.download = `seldon-${name}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
 developerModeButton.addEventListener("click", toggleDeveloperMode);
 themeToggleButton.addEventListener("click", toggleTheme);
 workspaceSelect.addEventListener("change", () => {

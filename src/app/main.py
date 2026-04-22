@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Thread
 
@@ -43,7 +44,7 @@ from .models import (
 )
 from .narrative_ops import build_narrative_prompt, request_ollama_narrative
 from .node_ops import create_node_version, merge_time_metadata, prepare_node_content
-from .ontology import EDGE_TYPES, NODE_TYPES
+from .ontology import NODE_TYPES
 from .schemas import (
     ArticleDraftCreate,
     ArticleDraftRead,
@@ -429,7 +430,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def ontology() -> dict[str, list[str]]:
         return {
             "node_types": sorted(NODE_TYPES),
-            "edge_types": sorted(EDGE_TYPES),
         }
 
     @app.get("/graph-data")
@@ -448,6 +448,67 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         else:
             workspace = require_workspace(db, workspace_id)
         return build_graph_payload(workspace, db)
+
+    @app.get("/graph-data/export")
+    def graph_data_export(
+        workspace_id: int | None = None,
+        token: str | None = None,
+        db: Session = Depends(db_dependency),
+    ) -> Response:
+        from fastapi.responses import JSONResponse
+        user = get_user_from_token(db, token)
+        if user is not None:
+            workspace = get_active_workspace_for_user(db, user)
+            if workspace_id is not None:
+                candidate = db.get(Workspace, workspace_id)
+                if candidate and candidate.user_id == user.id:
+                    workspace = candidate
+        else:
+            workspace = require_workspace(db, workspace_id)
+        nodes = list(
+            db.scalars(
+                select(Node)
+                .where(Node.workspace_id == workspace.id, Node.status != "deleted")
+                .order_by(Node.id)
+            )
+        )
+        active_node_ids = {node.id for node in nodes}
+        edges = list(
+            db.scalars(
+                select(Edge)
+                .where(
+                    Edge.workspace_id == workspace.id,
+                    Edge.from_node_id.in_(active_node_ids),
+                    Edge.to_node_id.in_(active_node_ids),
+                )
+                .order_by(Edge.id)
+            )
+        )
+        payload = {
+            "workspace": get_workspace_display_name(workspace),
+            "exported_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "nodes": [
+                {"id": n.id, "type": n.type, "raw_text": n.raw_text, "tags": n.tags}
+                for n in nodes
+            ],
+            "edges": [
+                {
+                    "id": e.id,
+                    "source": e.from_node_id,
+                    "target": e.to_node_id,
+                    "type": e.type,
+                    "weight": e.weight,
+                    "confidence": e.confidence,
+                    "evidence": e.evidence,
+                }
+                for e in edges
+            ],
+        }
+        workspace_slug = get_workspace_display_name(workspace).lower().replace(" ", "-")
+        return JSONResponse(
+            content=payload,
+            headers={"Content-Disposition": f'attachment; filename="seldon-{workspace_slug}.json"'},
+        )
 
     @app.get("/embed/graph-data")
     def embed_graph_data(
