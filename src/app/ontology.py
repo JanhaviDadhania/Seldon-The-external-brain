@@ -35,7 +35,7 @@ def validate_node_type(value: str) -> str:
 
 
 def validate_edge_type(value: str) -> str:
-    if value not in EDGE_TYPES:
-        allowed = ", ".join(sorted(EDGE_TYPES))
-        raise ValueError(f"Invalid edge type '{value}'. Allowed: {allowed}")
+    value = value.strip()
+    if not value:
+        raise ValueError("Edge type/note cannot be empty.")
     return value

@@ -66,20 +66,8 @@
                 <h4>Create Edge</h4>
                 <div id="edge-selection-summary" class="edge-selection-summary">Select two nodes.</div>
                 <form id="create-edge-form" class="create-node-form">
-                  <label for="create-edge-type">Edge Type</label>
-                  <select id="create-edge-type">
-                    <option value="similar_to">similar_to</option>
-                    <option value="supports">supports</option>
-                    <option value="contradicts">contradicts</option>
-                    <option value="expands">expands</option>
-                    <option value="led_to">led_to</option>
-                    <option value="belongs_to_topic">belongs_to_topic</option>
-                    <option value="derived_from">derived_from</option>
-                    <option value="mentions">mentions</option>
-                    <option value="inspired_by">inspired_by</option>
-                    <option value="part_of">part_of</option>
-                    <option value="reply_to">reply_to</option>
-                  </select>
+                  <label for="create-edge-type">Edge Note</label>
+                  <input id="create-edge-type" type="text" value="related-somehow" placeholder="describe the relationship…" maxlength="300" />
                   <label for="create-edge-weight">Weight</label>
                   <input id="create-edge-weight" type="number" min="0" max="1" step="0.05" value="0.5" />
                   <button id="create-edge-submit" type="submit">Save Edge</button>

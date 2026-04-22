@@ -220,8 +220,7 @@ body {
 
 button,
 .action-link,
-#workspace-select,
-#create-edge-type {
+#workspace-select {
   border: 0;
   background: transparent;
   padding: 4px 6px;
@@ -234,14 +233,12 @@ button,
 
 button:hover,
 .action-link:hover,
-#workspace-select:hover,
-#create-edge-type:hover {
+#workspace-select:hover {
   color: var(--text);
 }
 
 button:disabled,
-#workspace-select:disabled,
-#create-edge-type:disabled {
+#workspace-select:disabled {
   opacity: 0.45;
   cursor: default;
 }

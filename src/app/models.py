@@ -77,7 +77,7 @@ class Edge(TimestampMixin, Base):
     workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"), nullable=False, index=True)
     from_node_id: Mapped[int] = mapped_column(ForeignKey("nodes.id"), nullable=False, index=True)
     to_node_id: Mapped[int] = mapped_column(ForeignKey("nodes.id"), nullable=False, index=True)
-    type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     created_by: Mapped[str] = mapped_column(String(128), nullable=False, default="manual")

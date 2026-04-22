@@ -1360,7 +1360,7 @@ async function createEdgeFromForm(event) {
       const detail = payload && payload.detail ? payload.detail : `Create edge failed: ${response.status}`;
       throw new Error(detail);
     }
-    createEdgeType.value = "similar_to";
+    createEdgeType.value = "related-somehow";
     createEdgeWeight.value = "0.5";
     resetEdgeSelection();
     await loadGraph();
