@@ -47,6 +47,8 @@ from .node_ops import create_node_version, merge_time_metadata, prepare_node_con
 from .ontology import NODE_TYPES
 from .schemas import (
     ArticleDraftCreate,
+    LoginRequest,
+    LoginResponse,
     ArticleDraftRead,
     ArticleDraftUpdate,
     ArticleDraftVersionRead,
@@ -107,7 +109,7 @@ from .workspace_ops import (
     switch_workspace_by_name,
     switch_workspace_for_user,
 )
-from .seed_ops import seed_workspace
+from .seed_ops import seed_default_user, seed_workspace
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -198,6 +200,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
         with session_factory() as db:
             seed_workspace(db)
+        with session_factory() as db:
+            seed_default_user(db)
         start_model_setup(app)
         poll_task = asyncio.create_task(auto_poll_loop(app))
         yield
@@ -340,6 +344,53 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/embed", include_in_schema=False)
     def embed_home() -> FileResponse:
         return FileResponse(frontend_dir / "embed.html")
+
+    @app.get("/login", include_in_schema=False)
+    def login_page() -> FileResponse:
+        return FileResponse(frontend_dir / "login.html")
+
+    @app.post("/auth/login", response_model=LoginResponse)
+    def auth_login(
+        payload: LoginRequest,
+        db: Session = Depends(db_dependency),
+    ) -> LoginResponse:
+        import bcrypt as _bcrypt
+        from sqlalchemy import select as sa_select
+        user = db.scalar(sa_select(User).where(User.email == payload.email))
+        if (
+            user is None
+            or not user.password_hash
+            or not _bcrypt.checkpw(payload.password.encode(), user.password_hash.encode())
+        ):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        return LoginResponse(access_token=user.access_token)
+
+    @app.post("/auth/register", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
+    def auth_register(
+        payload: LoginRequest,
+        db: Session = Depends(db_dependency),
+    ) -> LoginResponse:
+        import secrets as _secrets
+        import bcrypt as _bcrypt
+        from sqlalchemy import select as sa_select
+        existing = db.scalar(sa_select(User).where(User.email == payload.email))
+        if existing is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        email = payload.email.strip().lower()
+        password_hash = _bcrypt.hashpw(payload.password.encode(), _bcrypt.gensalt()).decode()
+        user = User(
+            telegram_chat_id=f"email:{email}",
+            access_token=_secrets.token_urlsafe(32),
+            email=email,
+            password_hash=password_hash,
+        )
+        db.add(user)
+        db.flush()
+        from .workspace_ops import get_or_create_workspace_for_user, set_active_workspace_for_user
+        ws = get_or_create_workspace_for_user(db, "my graph", user)
+        set_active_workspace_for_user(db, user, ws)
+        db.commit()
+        return LoginResponse(access_token=user.access_token)
 
     @app.post("/edge-creation/{function_name}", response_model=EdgeCreationResponse)
     def run_edge_creation_endpoint(

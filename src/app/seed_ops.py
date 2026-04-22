@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+import secrets
+
+import bcrypt
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from .models import Edge, Node, Workspace
+from .models import Edge, Node, User, Workspace
 from .workspace_ops import get_or_create_workspace, set_active_workspace
+
+DEFAULT_USER_EMAIL = "rioname@gmail.com"
+DEFAULT_USER_PASSWORD = "shubham"
 
 
 SEED_WORKSPACE_NAME = "humans (default)"
@@ -69,6 +75,28 @@ SEED_EDGES = [
     (6, 7, "led_to", 0.9),
     (7, 8, "led_to", 0.95),
 ]
+
+
+def seed_default_user(db: Session) -> None:
+    existing = db.scalar(select(User).where(User.email == DEFAULT_USER_EMAIL))
+    if existing is not None:
+        return
+
+    password_hash = bcrypt.hashpw(DEFAULT_USER_PASSWORD.encode(), bcrypt.gensalt()).decode()
+    user = User(
+        telegram_chat_id=f"email:{DEFAULT_USER_EMAIL}",
+        access_token=secrets.token_urlsafe(32),
+        email=DEFAULT_USER_EMAIL,
+        password_hash=password_hash,
+    )
+    db.add(user)
+    db.flush()
+
+    db.execute(
+        text("UPDATE workspaces SET user_id = :uid WHERE user_id IS NULL"),
+        {"uid": user.id},
+    )
+    db.commit()
 
 
 def seed_workspace(db: Session) -> None:

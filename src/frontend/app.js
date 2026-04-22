@@ -54,6 +54,9 @@ let currentTheme = window.localStorage.getItem("theme") || "light";
     url.searchParams.delete("token");
     window.history.replaceState({}, "", url.toString());
   }
+  if (!window.localStorage.getItem("authToken")) {
+    window.location.href = "/login";
+  }
 })();
 const authToken = window.localStorage.getItem("authToken");
 
@@ -1511,6 +1514,11 @@ window.addEventListener("DOMContentLoaded", () => {
   updateNarrativeModeButton();
   updatePathTracingButton();
   waitForSetup();
+  document.getElementById("logout-button").addEventListener("click", () => {
+    window.localStorage.removeItem("authToken");
+    window.localStorage.removeItem("workspaceId");
+    window.location.href = "/login";
+  });
 });
 async function handleWorkspaceChange() {
   const nextWorkspaceId = Number(workspaceSelect.value);

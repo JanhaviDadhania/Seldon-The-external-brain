@@ -8,6 +8,15 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from .ontology import validate_edge_type, validate_node_type
 
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+
+
 class HealthResponse(BaseModel):
     app_name: str
     environment: str

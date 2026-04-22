@@ -96,6 +96,18 @@ def _migrate_sqlite_schema(engine) -> None:
                 )
             )
 
+    if "users" in inspector.get_table_names():
+        user_cols = {col["name"] for col in inspector.get_columns("users")}
+        with engine.begin() as connection:
+            if "email" not in user_cols:
+                connection.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
+                connection.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email "
+                    "ON users (email) WHERE email IS NOT NULL"
+                ))
+            if "password_hash" not in user_cols:
+                connection.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)"))
+
     if "workspaces" in inspector.get_table_names():
         columns = {column["name"] for column in inspector.get_columns("workspaces")}
         with engine.begin() as connection:
