@@ -30,6 +30,12 @@
           <div class="floating-panel">
             <div id="node-detail" class="node-detail hidden">
               <div class="detail-sheet">
+                <div id="detail-image-section" class="detail-image-section">
+                  <img id="detail-image" class="detail-node-image hidden" alt="" />
+                  <label id="detail-image-upload" class="detail-image-upload" for="detail-image-input">+ Add image</label>
+                  <input id="detail-image-input" type="file" accept="image/*" hidden />
+                  <button id="detail-image-remove" type="button" class="detail-image-remove hidden">×</button>
+                </div>
                 <div class="detail-section">
                   <h4>Note</h4>
                   <textarea id="detail-raw" class="detail-copy detail-edit"></textarea>
@@ -66,22 +72,10 @@
                 <h4>Create Edge</h4>
                 <div id="edge-selection-summary" class="edge-selection-summary">Select two nodes.</div>
                 <form id="create-edge-form" class="create-node-form">
-                  <label for="create-edge-type">Edge Type</label>
-                  <select id="create-edge-type">
-                    <option value="similar_to">similar_to</option>
-                    <option value="supports">supports</option>
-                    <option value="contradicts">contradicts</option>
-                    <option value="expands">expands</option>
-                    <option value="led_to">led_to</option>
-                    <option value="belongs_to_topic">belongs_to_topic</option>
-                    <option value="derived_from">derived_from</option>
-                    <option value="mentions">mentions</option>
-                    <option value="inspired_by">inspired_by</option>
-                    <option value="part_of">part_of</option>
-                    <option value="reply_to">reply_to</option>
-                  </select>
-                  <label for="create-edge-weight">Weight</label>
-                  <input id="create-edge-weight" type="number" min="0" max="1" step="0.05" value="0.5" />
+                  <label for="create-edge-type">Edge Note</label>
+                  <input id="create-edge-type" type="text" value="related-somehow" placeholder="describe the relationship…" maxlength="300" />
+                  <label for="create-edge-weight">Weight <span id="edge-weight-display">10</span></label>
+                  <input id="create-edge-weight" type="range" min="0" max="100" step="1" value="10" />
                   <button id="create-edge-submit" type="submit">Save Edge</button>
                 </form>
               </div>
@@ -137,9 +131,11 @@
     <!-- Meta bar: fixed bottom right -->
     <div class="meta-bar">
       <a class="action-link" href="/advanced">Advanced</a>
+      <button id="export-graph-button" type="button">Export</button>
       <button id="theme-toggle-button" type="button">Dark</button>
       <button id="developer-mode-button" type="button" aria-pressed="false">Developer Mode Off</button>
       <span id="developer-mode-status" class="action-status">showing user tags</span>
+      <button id="logout-button" type="button">Logout</button>
     </div>
 
 

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seldon | Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-bg: #f2ede4;
+        --desk: #ebe4d8;
+        --panel-line: #ddd1be;
+        --text: #2a2018;
+        --muted: #7d6d5b;
+        --action: #5f5144;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(255, 251, 245, 0.9), transparent 28%),
+          linear-gradient(180deg, #f7f2ea 0%, var(--paper-bg) 100%);
+        color: var(--text);
+        font-family: "EB Garamond", Georgia, serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .login-card {
+        background: var(--desk);
+        border: 1px solid var(--panel-line);
+        border-radius: 4px;
+        padding: 2.5rem 2.8rem;
+        width: 100%;
+        max-width: 380px;
+        box-shadow: 0 18px 36px rgba(85, 67, 48, 0.08);
+      }
+
+      h1 {
+        font-size: 1.55rem;
+        font-weight: 500;
+        margin: 0 0 0.25rem;
+        letter-spacing: 0.01em;
+      }
+
+      .subtitle {
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin: 0 0 1.8rem;
+      }
+
+      label {
+        display: block;
+        font-size: 0.82rem;
+        color: var(--muted);
+        margin-bottom: 0.3rem;
+        font-family: "IBM Plex Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      input[type="email"],
+      input[type="password"] {
+        width: 100%;
+        padding: 0.55rem 0.75rem;
+        font-size: 1rem;
+        font-family: "EB Garamond", Georgia, serif;
+        background: var(--paper-bg);
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        color: var(--text);
+        outline: none;
+        margin-bottom: 1.1rem;
+        transition: border-color 0.15s;
+      }
+
+      input[type="email"]:focus,
+      input[type="password"]:focus {
+        border-color: var(--muted);
+      }
+
+      .submit-btn {
+        width: 100%;
+        padding: 0.6rem;
+        font-size: 1rem;
+        font-family: "EB Garamond", Georgia, serif;
+        background: var(--action);
+        color: #f5efe6;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        letter-spacing: 0.02em;
+        transition: opacity 0.15s;
+        margin-top: 0.3rem;
+      }
+
+      .submit-btn:hover { opacity: 0.88; }
+      .submit-btn:disabled { opacity: 0.5; cursor: default; }
+
+      .toggle-row {
+        margin-top: 1.2rem;
+        text-align: center;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .toggle-row button {
+        background: none;
+        border: none;
+        color: var(--action);
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-family: "EB Garamond", Georgia, serif;
+        padding: 0;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .error-msg {
+        font-size: 0.875rem;
+        color: #8b3a2a;
+        background: #f5e8e4;
+        border: 1px solid #e0c4bc;
+        border-radius: 3px;
+        padding: 0.45rem 0.7rem;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .error-msg.visible { display: block; }
+    </style>
+  </head>
+  <body>
+    <div class="login-card">
+      <h1>Seldon</h1>
+      <p class="subtitle" id="subtitle">Sign in to your external brain.</p>
+
+      <div class="error-msg" id="error-msg"></div>
+
+      <form id="auth-form" autocomplete="on">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email" required />
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required />
+
+        <button class="submit-btn" type="submit" id="submit-btn">Sign in</button>
+      </form>
+
+      <div class="toggle-row">
+        <span id="toggle-label">Don't have an account?</span>
+        <button type="button" id="toggle-btn">Register</button>
+      </div>
+    </div>
+
+    <script>
+      let mode = "login";
+
+      const form = document.getElementById("auth-form");
+      const submitBtn = document.getElementById("submit-btn");
+      const toggleBtn = document.getElementById("toggle-btn");
+      const toggleLabel = document.getElementById("toggle-label");
+      const subtitle = document.getElementById("subtitle");
+      const errorMsg = document.getElementById("error-msg");
+      const passwordInput = document.getElementById("password");
+
+      toggleBtn.addEventListener("click", () => {
+        mode = mode === "login" ? "register" : "login";
+        if (mode === "register") {
+          subtitle.textContent = "Create your account.";
+          submitBtn.textContent = "Register";
+          toggleLabel.textContent = "Already have an account?";
+          toggleBtn.textContent = "Sign in";
+          passwordInput.setAttribute("autocomplete", "new-password");
+        } else {
+          subtitle.textContent = "Sign in to your external brain.";
+          submitBtn.textContent = "Sign in";
+          toggleLabel.textContent = "Don't have an account?";
+          toggleBtn.textContent = "Register";
+          passwordInput.setAttribute("autocomplete", "current-password");
+        }
+        errorMsg.classList.remove("visible");
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorMsg.classList.remove("visible");
+        submitBtn.disabled = true;
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
+
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            window.localStorage.setItem("authToken", data.access_token);
+            window.location.href = "/graph";
+          } else {
+            const data = await res.json().catch(() => ({}));
+            errorMsg.textContent = data.detail || "Something went wrong. Please try again.";
+            errorMsg.classList.add("visible");
+          }
+        } catch {
+          errorMsg.textContent = "Network error. Please try again.";
+          errorMsg.classList.add("visible");
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

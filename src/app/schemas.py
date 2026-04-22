@@ -8,6 +8,15 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from .ontology import validate_edge_type, validate_node_type
 
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+
+
 class HealthResponse(BaseModel):
     app_name: str
     environment: str
@@ -144,7 +153,7 @@ class EdgeCreate(BaseModel):
     workspace_id: int | None = None
     from_node_id: int
     to_node_id: int
-    type: str
+    type: str = "related-somehow"
     weight: float = 0.5
     confidence: float = 0.5
     created_by: str = "manual"

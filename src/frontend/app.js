@@ -11,6 +11,7 @@ const reviewLinksButton = document.getElementById("review-links-button");
 const developerModeButton = document.getElementById("developer-mode-button");
 const developerModeStatus = document.getElementById("developer-mode-status");
 const themeToggleButton = document.getElementById("theme-toggle-button");
+const exportGraphButton = document.getElementById("export-graph-button");
 const emptyState = document.getElementById("empty-state");
 const nodeDetail = document.getElementById("node-detail");
 const detailRaw = document.getElementById("detail-raw");
@@ -29,6 +30,7 @@ const edgeSelectionSummary = document.getElementById("edge-selection-summary");
 const createEdgeForm = document.getElementById("create-edge-form");
 const createEdgeType = document.getElementById("create-edge-type");
 const createEdgeWeight = document.getElementById("create-edge-weight");
+const edgeWeightDisplay = document.getElementById("edge-weight-display");
 const createEdgeSubmit = document.getElementById("create-edge-submit");
 const proposalOverlay = document.getElementById("proposal-overlay");
 const closeProposalsButton = document.getElementById("close-proposals-button");
@@ -36,6 +38,11 @@ const proposalList = document.getElementById("proposal-list");
 const detailSaveButton = document.getElementById("detail-save-button");
 const detailTagInput = document.getElementById("detail-tag-input");
 const detailTagAdd = document.getElementById("detail-tag-add");
+const detailImageSection = document.getElementById("detail-image-section");
+const detailImage = document.getElementById("detail-image");
+const detailImageUpload = document.getElementById("detail-image-upload");
+const detailImageInput = document.getElementById("detail-image-input");
+const detailImageRemove = document.getElementById("detail-image-remove");
 
 let activeNodeId = null;
 let currentData = { nodes: [], edges: [] };
@@ -51,6 +58,9 @@ let currentTheme = window.localStorage.getItem("theme") || "light";
     const url = new URL(window.location.href);
     url.searchParams.delete("token");
     window.history.replaceState({}, "", url.toString());
+  }
+  if (!window.localStorage.getItem("authToken")) {
+    window.location.href = "/login";
   }
 })();
 const authToken = window.localStorage.getItem("authToken");
@@ -225,7 +235,7 @@ function nodePreview(nodeId) {
   const node = edgeSelectionNode(nodeId);
   if (!node) return "none";
   const text = String(node.raw_text || "").trim();
-  return text.length > 72 ? `${text.slice(0, 72)}...` : text;
+  return text;
 }
 
 function updateEdgeSelectionUi() {
@@ -638,9 +648,10 @@ function ensureDefs() {
   defs.appendChild(grid);
 
   svg.appendChild(defs);
+  return defs;
 }
 
-function wrapText(text, maxCharsPerLine = 22, maxLines = 5) {
+function wrapText(text, maxCharsPerLine = 22) {
   const words = String(text || "").trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return ["untitled"];
 
@@ -656,26 +667,24 @@ function wrapText(text, maxCharsPerLine = 22, maxLines = 5) {
 
     if (current) lines.push(current);
     current = word;
-    if (lines.length === maxLines - 1) break;
   }
 
-  if (current && lines.length < maxLines) lines.push(current);
+  if (current) lines.push(current);
 
-  if (lines.length === maxLines && words.join(" ").length > lines.join(" ").length) {
-    lines[maxLines - 1] = `${lines[maxLines - 1].replace(/[.,;:!?]?$/, "")}...`;
-  }
-
-  return lines.slice(0, maxLines);
+  return lines;
 }
+
+const IMAGE_HEIGHT = 120;
 
 function getNoteSize(node) {
   const length = (node.raw_text || node.label || "").length;
   const width = length > 240 ? 206 : 178;
-  const lines = wrapText(node.label || node.raw_text || "");
+  const lines = wrapText(node.raw_text || node.label || "");
   const minHeight = 86;
   const bodyHeight = 26 + lines.length * 20;
   const extra = length > 240 ? 26 : length > 140 ? 12 : 0;
-  return { width, height: Math.max(minHeight, bodyHeight + extra), lines };
+  const imageExtra = node.image ? IMAGE_HEIGHT : 0;
+  return { width, height: Math.max(minHeight, bodyHeight + extra) + imageExtra, lines };
 }
 
 function getNoteStyle(node) {
@@ -698,6 +707,19 @@ function renderDetail(node) {
   activeNodeId = node.id;
   emptyState.classList.add("hidden");
   nodeDetail.classList.remove("hidden");
+
+  if (node.image) {
+    detailImage.src = node.image;
+    detailImage.classList.remove("hidden");
+    detailImageUpload.classList.add("hidden");
+    detailImageRemove.classList.remove("hidden");
+  } else {
+    detailImage.src = "";
+    detailImage.classList.add("hidden");
+    detailImageUpload.classList.remove("hidden");
+    detailImageRemove.classList.add("hidden");
+  }
+
   detailRaw.value = node.raw_text;
   detailRaw.style.height = "auto";
   detailRaw.style.height = `${detailRaw.scrollHeight}px`;
@@ -810,7 +832,7 @@ function applyDragPosition(nodeId, x, y) {
 function renderGraph(data) {
   currentData = data;
   clearSvg();
-  ensureDefs();
+  const svgDefs = ensureDefs();
 
   const width = graphCanvas.clientWidth;
   const height = graphCanvas.clientHeight;
@@ -948,10 +970,35 @@ function renderGraph(data) {
       }));
     }
 
+    if (node.image) {
+      const clipId = `node-img-clip-${node.id}`;
+      const clip = svgEl("clipPath", { id: clipId });
+      clip.appendChild(svgEl("rect", {
+        x: -size.width / 2,
+        y: -size.height / 2,
+        width: size.width,
+        height: IMAGE_HEIGHT,
+        rx: 8,
+        ry: 8,
+      }));
+      svgDefs.appendChild(clip);
+      group.appendChild(svgEl("image", {
+        href: node.image,
+        x: -size.width / 2,
+        y: -size.height / 2,
+        width: size.width,
+        height: IMAGE_HEIGHT,
+        preserveAspectRatio: "xMidYMid slice",
+        "clip-path": `url(#${clipId})`,
+      }));
+    }
+
+    const textOffsetY = node.image ? IMAGE_HEIGHT : 0;
+
     if (node.type === "topic") {
       const stamp = svgEl("text", {
         x: -size.width / 2 + 14,
-        y: -size.height / 2 + 16,
+        y: -size.height / 2 + textOffsetY + 16,
         class: "topic-stamp",
       });
       stamp.textContent = "TOPIC";
@@ -960,7 +1007,7 @@ function renderGraph(data) {
 
     const label = svgEl("text", {
       x: -size.width / 2 + 14,
-      y: -size.height / 2 + 24,
+      y: -size.height / 2 + textOffsetY + 24,
       class: "node-label",
     });
 
@@ -1338,13 +1385,14 @@ async function createEdgeFromForm(event) {
   }
 
   const weight = Number(createEdgeWeight.value);
+  const w = Number.isFinite(weight) ? weight / 100 : 0.1;
   const body = {
     workspace_id: currentWorkspaceId,
     from_node_id: edgeSourceNodeId,
     to_node_id: edgeTargetNodeId,
     type: createEdgeType.value,
-    weight: Number.isFinite(weight) ? weight : 0.5,
-    confidence: Number.isFinite(weight) ? weight : 0.5,
+    weight: w,
+    confidence: w,
     created_by: "manual_ui",
   };
 
@@ -1360,8 +1408,9 @@ async function createEdgeFromForm(event) {
       const detail = payload && payload.detail ? payload.detail : `Create edge failed: ${response.status}`;
       throw new Error(detail);
     }
-    createEdgeType.value = "similar_to";
-    createEdgeWeight.value = "0.5";
+    createEdgeType.value = "related-somehow";
+    createEdgeWeight.value = "10";
+    edgeWeightDisplay.textContent = "10";
     resetEdgeSelection();
     await loadGraph();
   } catch (error) {
@@ -1458,6 +1507,22 @@ toggleAddNodeButton.addEventListener("click", () => {
   addNodeSheet.classList.toggle("hidden");
 });
 reviewLinksButton.addEventListener("click", openProposalDrawer);
+exportGraphButton.addEventListener("click", async () => {
+  const parts = ["graph-data/export"];
+  const qs = [];
+  if (authToken) qs.push(`token=${encodeURIComponent(authToken)}`);
+  if (currentWorkspaceId) qs.push(`workspace_id=${encodeURIComponent(String(currentWorkspaceId))}`);
+  if (qs.length) parts.push(qs.join("&"));
+  const resp = await fetch(`/${parts[0]}?${parts[1] || ""}`);
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const name = (currentWorkspaceName || "graph").toLowerCase().replace(/\s+/g, "-");
+  a.download = `seldon-${name}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
 developerModeButton.addEventListener("click", toggleDeveloperMode);
 themeToggleButton.addEventListener("click", toggleTheme);
 workspaceSelect.addEventListener("change", () => {
@@ -1470,8 +1535,37 @@ workspaceSelect.addEventListener("change", () => {
 });
 createNodeForm.addEventListener("submit", createNodeFromForm);
 createEdgeForm.addEventListener("submit", createEdgeFromForm);
+createEdgeWeight.addEventListener("input", () => { edgeWeightDisplay.textContent = createEdgeWeight.value; });
 closeProposalsButton.addEventListener("click", closeProposalDrawer);
 detailSaveButton.addEventListener("click", () => { if (activeNodeId) saveNodeEdits(activeNodeId); });
+detailImageInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file || !activeNodeId) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  try {
+    const response = await fetch(withWorkspace(`/nodes/${activeNodeId}/image`), {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) throw new Error("Upload failed");
+    await loadGraph();
+    const updated = getNodeById(activeNodeId);
+    if (updated) renderDetail(updated);
+  } finally {
+    detailImageInput.value = "";
+  }
+});
+detailImageRemove.addEventListener("click", async () => {
+  if (!activeNodeId) return;
+  const response = await fetch(withWorkspace(`/nodes/${activeNodeId}/image`), {
+    method: "DELETE",
+  });
+  if (!response.ok) return;
+  await loadGraph();
+  const updated = getNodeById(activeNodeId);
+  if (updated) renderDetail(updated);
+});
 detailRaw.addEventListener("input", () => {
   detailRaw.style.height = "auto";
   detailRaw.style.height = `${detailRaw.scrollHeight}px`;
@@ -1495,6 +1589,11 @@ window.addEventListener("DOMContentLoaded", () => {
   updateNarrativeModeButton();
   updatePathTracingButton();
   waitForSetup();
+  document.getElementById("logout-button").addEventListener("click", () => {
+    window.localStorage.removeItem("authToken");
+    window.localStorage.removeItem("workspaceId");
+    window.location.href = "/login";
+  });
 });
 async function handleWorkspaceChange() {
   const nextWorkspaceId = Number(workspaceSelect.value);

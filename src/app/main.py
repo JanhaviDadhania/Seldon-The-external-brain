@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Thread
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+import shutil
+
+from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
@@ -43,9 +46,11 @@ from .models import (
 )
 from .narrative_ops import build_narrative_prompt, request_ollama_narrative
 from .node_ops import create_node_version, merge_time_metadata, prepare_node_content
-from .ontology import EDGE_TYPES, NODE_TYPES
+from .ontology import NODE_TYPES
 from .schemas import (
     ArticleDraftCreate,
+    LoginRequest,
+    LoginResponse,
     ArticleDraftRead,
     ArticleDraftUpdate,
     ArticleDraftVersionRead,
@@ -106,7 +111,7 @@ from .workspace_ops import (
     switch_workspace_by_name,
     switch_workspace_for_user,
 )
-from .seed_ops import seed_workspace
+from .seed_ops import seed_default_user, seed_workspace, seed_workspace_for_user
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -114,6 +119,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     session_factory = create_session_factory(app_settings)
     engine = session_factory.kw["bind"]
     frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+    uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
+    uploads_dir.mkdir(exist_ok=True)
 
     def start_model_setup(app: FastAPI) -> None:
         def worker() -> None:
@@ -164,6 +171,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             db.commit()
                             db.refresh(user)
                             if is_new:
+                                seed_workspace_for_user(db, user)
                                 first_name = (message.get("from") or {}).get("first_name", "")
                                 graph_url = f"{app_settings.public_url}/graph?token={user.access_token}"
                                 welcome = (
@@ -197,6 +205,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
         with session_factory() as db:
             seed_workspace(db)
+        with session_factory() as db:
+            seed_default_user(db)
         start_model_setup(app)
         poll_task = asyncio.create_task(auto_poll_loop(app))
         yield
@@ -215,6 +225,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
     def db_dependency(request: Request):
         yield from get_db(request.app.state.session_factory)
@@ -297,6 +308,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "tags": node.tags,
                     "linker_tags": (node.metadata_json.get("linker_tags", {}) or {}),
                     "ui_position": node.metadata_json.get("ui_position") or None,
+                    "image": node.metadata_json.get("image") or None,
                     "source": node.source,
                     "status": node.status,
                 }
@@ -339,6 +351,51 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/embed", include_in_schema=False)
     def embed_home() -> FileResponse:
         return FileResponse(frontend_dir / "embed.html")
+
+    @app.get("/login", include_in_schema=False)
+    def login_page() -> FileResponse:
+        return FileResponse(frontend_dir / "login.html")
+
+    @app.post("/auth/login", response_model=LoginResponse)
+    def auth_login(
+        payload: LoginRequest,
+        db: Session = Depends(db_dependency),
+    ) -> LoginResponse:
+        import bcrypt as _bcrypt
+        from sqlalchemy import select as sa_select
+        user = db.scalar(sa_select(User).where(User.email == payload.email))
+        if (
+            user is None
+            or not user.password_hash
+            or not _bcrypt.checkpw(payload.password.encode(), user.password_hash.encode())
+        ):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        return LoginResponse(access_token=user.access_token)
+
+    @app.post("/auth/register", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
+    def auth_register(
+        payload: LoginRequest,
+        db: Session = Depends(db_dependency),
+    ) -> LoginResponse:
+        import secrets as _secrets
+        import bcrypt as _bcrypt
+        from sqlalchemy import select as sa_select
+        existing = db.scalar(sa_select(User).where(User.email == payload.email))
+        if existing is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        email = payload.email.strip().lower()
+        password_hash = _bcrypt.hashpw(payload.password.encode(), _bcrypt.gensalt()).decode()
+        user = User(
+            telegram_chat_id=f"email:{email}",
+            access_token=_secrets.token_urlsafe(32),
+            email=email,
+            password_hash=password_hash,
+        )
+        db.add(user)
+        db.flush()
+        seed_workspace_for_user(db, user)
+        db.commit()
+        return LoginResponse(access_token=user.access_token)
 
     @app.post("/edge-creation/{function_name}", response_model=EdgeCreationResponse)
     def run_edge_creation_endpoint(
@@ -429,7 +486,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def ontology() -> dict[str, list[str]]:
         return {
             "node_types": sorted(NODE_TYPES),
-            "edge_types": sorted(EDGE_TYPES),
         }
 
     @app.get("/graph-data")
@@ -448,6 +504,67 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         else:
             workspace = require_workspace(db, workspace_id)
         return build_graph_payload(workspace, db)
+
+    @app.get("/graph-data/export")
+    def graph_data_export(
+        workspace_id: int | None = None,
+        token: str | None = None,
+        db: Session = Depends(db_dependency),
+    ) -> Response:
+        from fastapi.responses import JSONResponse
+        user = get_user_from_token(db, token)
+        if user is not None:
+            workspace = get_active_workspace_for_user(db, user)
+            if workspace_id is not None:
+                candidate = db.get(Workspace, workspace_id)
+                if candidate and candidate.user_id == user.id:
+                    workspace = candidate
+        else:
+            workspace = require_workspace(db, workspace_id)
+        nodes = list(
+            db.scalars(
+                select(Node)
+                .where(Node.workspace_id == workspace.id, Node.status != "deleted")
+                .order_by(Node.id)
+            )
+        )
+        active_node_ids = {node.id for node in nodes}
+        edges = list(
+            db.scalars(
+                select(Edge)
+                .where(
+                    Edge.workspace_id == workspace.id,
+                    Edge.from_node_id.in_(active_node_ids),
+                    Edge.to_node_id.in_(active_node_ids),
+                )
+                .order_by(Edge.id)
+            )
+        )
+        payload = {
+            "workspace": get_workspace_display_name(workspace),
+            "exported_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "nodes": [
+                {"id": n.id, "type": n.type, "raw_text": n.raw_text, "tags": n.tags}
+                for n in nodes
+            ],
+            "edges": [
+                {
+                    "id": e.id,
+                    "source": e.from_node_id,
+                    "target": e.to_node_id,
+                    "type": e.type,
+                    "weight": e.weight,
+                    "confidence": e.confidence,
+                    "evidence": e.evidence,
+                }
+                for e in edges
+            ],
+        }
+        workspace_slug = get_workspace_display_name(workspace).lower().replace(" ", "-")
+        return JSONResponse(
+            content=payload,
+            headers={"Content-Disposition": f'attachment; filename="seldon-{workspace_slug}.json"'},
+        )
 
     @app.get("/embed/graph-data")
     def embed_graph_data(
@@ -748,6 +865,55 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if node.status != "deleted":
             enqueue_link_job(db, node, settings.candidate_retrieval_limit)
             enqueue_embedding_job(db, node, settings.embedding_model_name)
+        return node
+
+    @app.post("/nodes/{node_id}/image", response_model=NodeRead)
+    async def upload_node_image(
+        node_id: int,
+        file: UploadFile = File(...),
+        workspace_id: int | None = None,
+        db: Session = Depends(db_dependency),
+    ) -> Node:
+        workspace = require_workspace(db, workspace_id)
+        node = require_node(db, node_id, workspace.id)
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="File must be an image")
+        suffix = Path(file.filename).suffix.lower() if file.filename else ".jpg"
+        if suffix not in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
+            suffix = ".jpg"
+        old_image = (node.metadata_json or {}).get("image")
+        if old_image:
+            old_file = uploads_dir / Path(old_image).name
+            if old_file.exists():
+                old_file.unlink()
+        filename = f"{node_id}{suffix}"
+        with (uploads_dir / filename).open("wb") as dest:
+            shutil.copyfileobj(file.file, dest)
+        merged = dict(node.metadata_json or {})
+        merged["image"] = f"/uploads/{filename}"
+        node.metadata_json = merged
+        db.commit()
+        db.refresh(node)
+        return node
+
+    @app.delete("/nodes/{node_id}/image", response_model=NodeRead)
+    def delete_node_image(
+        node_id: int,
+        workspace_id: int | None = None,
+        db: Session = Depends(db_dependency),
+    ) -> Node:
+        workspace = require_workspace(db, workspace_id)
+        node = require_node(db, node_id, workspace.id)
+        image_path = (node.metadata_json or {}).get("image")
+        if image_path:
+            file_path = uploads_dir / Path(image_path).name
+            if file_path.exists():
+                file_path.unlink()
+        merged = dict(node.metadata_json or {})
+        merged.pop("image", None)
+        node.metadata_json = merged
+        db.commit()
+        db.refresh(node)
         return node
 
     @app.delete("/nodes/{node_id}", response_model=NodeRead)

@@ -68,7 +68,7 @@ twitter_poster/
 - Note card (top right) — appears when a node is clicked; text and tags are editable inline, Save button PATCHes the node
 - Floating action bar (bottom center) — all actions
 - Workspace island (top left) — workspace switcher
-- Meta bar (bottom right) — Advanced link + Theme toggle + Developer Mode
+- Meta bar (bottom right) — Advanced link + Export + Theme toggle + Developer Mode
 
 **Figma-like pan/zoom** — two-finger drag = pan, pinch/ctrl+scroll = zoom.
 Uses CSS `transform: translate + scale` on the SVG, NOT native browser scroll.
@@ -78,15 +78,17 @@ Uses CSS `transform: translate + scale` on the SVG, NOT native browser scroll.
 
 **Node drag** — nodes are draggable. Positions stored in module-level `nodePositions` Map (keyed by node id). On drag end, position is PATCHed to `node.metadata_json.ui_position` and restored from there on next load. `nodePositions` is cleared on workspace switch.
 
-**Edge creation always on** — no mode toggle. First click on a node sets it as edge source; second click on a different node sets the target and shows the edge form. Clicking the source node again cancels the selection.
+**Edge creation always on** — no mode toggle. First click on a node sets it as edge source; second click on a different node sets the target and shows the edge form. Clicking the source node again cancels the selection. The form has a free-form "Edge Note" text input (stored as `edge.type`, max 300 chars, default "related-somehow") and a 0–100 weight slider (divided by 100 before sending to the API).
 
-**Node editing** — the note card (top right) has an auto-growing textarea for `raw_text` and editable tags (× to remove, Enter to add). Save calls `PATCH /nodes/{id}` with updated `raw_text` and `tags`. Hidden in developer mode (linker tags are read-only).
+**Node editing** — the note card (top right) has an image section at the top (WhatsApp-style), an auto-growing textarea for `raw_text`, and editable tags (× to remove, Enter to add). Save calls `PATCH /nodes/{id}` with updated `raw_text` and `tags`. Image upload calls `POST /nodes/{id}/image` (multipart); removal calls `DELETE /nodes/{id}/image`. Images stored in `src/uploads/`, served at `/uploads/`. The image thumbnail also renders on the graph node card in SVG. Hidden in developer mode (linker tags are read-only).
 
 **Themes** — three themes cycle via a toggle button in the meta bar. Preference saved in `localStorage`. Theme applied via `data-theme` attribute on `<html>`:
 - (none) / light: warm parchment default
 - `dark`: deep warm brown palette
 - `colorful`: illustrated background image with blur, via `::before` pseudo-element
 Node card fills are switched in JS (`NOTE_BACKGROUNDS`, `NOTE_BACKGROUNDS_DARK`, `NOTE_BACKGROUNDS_COLORFUL` arrays) since SVG inline `fill` attributes can't be overridden by CSS.
+
+**Graph export** — "Export" button in the meta bar calls `GET /graph-data/export?workspace_id=&token=`. Returns JSON with keys `workspace`, `exported_at`, `nodes` (id, type, raw_text, tags), and `edges` (id, source, target, type, weight, confidence, evidence). File downloads as `seldon-{workspace-slug}.json`. Scoped to the active workspace only.
 
 **SQLite on Railway** — use a Railway Volume mounted at `/data`. Set env var:
 `DATABASE_URL=sqlite:////data/twitter_poster.db`

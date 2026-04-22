@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+import secrets
+
+import bcrypt
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from .models import Edge, Node, Workspace
-from .workspace_ops import get_or_create_workspace, set_active_workspace
+from .models import Edge, Node, User, Workspace
+from .workspace_ops import get_or_create_workspace, get_or_create_workspace_for_user, set_active_workspace, set_active_workspace_for_user
+
+DEFAULT_USER_EMAIL = "rioname@gmail.com"
+DEFAULT_USER_PASSWORD = "shubham"
 
 
 SEED_WORKSPACE_NAME = "humans (default)"
@@ -14,6 +20,7 @@ SEED_NODES = [
         "raw_text": "Are humans better than other animals?",
         "type": "idea",
         "tags": ["evolution", "biology", "humans", "thinking"],
+        "image": "/uploads/seldon.jpg",
     },
     {
         "raw_text": "We have better analytical capabilities — we think longer, harder, and weirder than any other animal.",
@@ -71,6 +78,28 @@ SEED_EDGES = [
 ]
 
 
+def seed_default_user(db: Session) -> None:
+    existing = db.scalar(select(User).where(User.email == DEFAULT_USER_EMAIL))
+    if existing is not None:
+        return
+
+    password_hash = bcrypt.hashpw(DEFAULT_USER_PASSWORD.encode(), bcrypt.gensalt()).decode()
+    user = User(
+        telegram_chat_id=f"email:{DEFAULT_USER_EMAIL}",
+        access_token=secrets.token_urlsafe(32),
+        email=DEFAULT_USER_EMAIL,
+        password_hash=password_hash,
+    )
+    db.add(user)
+    db.flush()
+
+    db.execute(
+        text("UPDATE workspaces SET user_id = :uid WHERE user_id IS NULL"),
+        {"uid": user.id},
+    )
+    db.commit()
+
+
 def seed_workspace(db: Session) -> None:
     workspace = get_or_create_workspace(db, SEED_WORKSPACE_NAME)
     set_active_workspace(db, workspace)
@@ -85,6 +114,9 @@ def seed_workspace(db: Session) -> None:
 
     created_nodes = []
     for node_data in SEED_NODES:
+        metadata: dict = {}
+        if node_data.get("image"):
+            metadata["image"] = node_data["image"]
         node = Node(
             workspace_id=workspace.id,
             type=node_data["type"],
@@ -92,7 +124,50 @@ def seed_workspace(db: Session) -> None:
             normalized_text=node_data["raw_text"],
             source="seed",
             tags=node_data["tags"],
-            metadata_json={},
+            metadata_json=metadata,
+        )
+        db.add(node)
+        db.flush()
+        created_nodes.append(node)
+
+    for from_idx, to_idx, edge_type, weight in SEED_EDGES:
+        edge = Edge(
+            workspace_id=workspace.id,
+            from_node_id=created_nodes[from_idx].id,
+            to_node_id=created_nodes[to_idx].id,
+            type=edge_type,
+            weight=weight,
+            confidence=weight,
+            created_by="seed",
+        )
+        db.add(edge)
+
+    db.commit()
+
+
+def seed_workspace_for_user(db: Session, user: User) -> None:
+    workspace = get_or_create_workspace_for_user(db, SEED_WORKSPACE_NAME, user)
+    set_active_workspace_for_user(db, user, workspace)
+
+    existing = db.scalar(
+        select(Node).where(Node.workspace_id == workspace.id, Node.status != "deleted").limit(1)
+    )
+    if existing is not None:
+        return
+
+    created_nodes = []
+    for node_data in SEED_NODES:
+        metadata: dict = {}
+        if node_data.get("image"):
+            metadata["image"] = node_data["image"]
+        node = Node(
+            workspace_id=workspace.id,
+            type=node_data["type"],
+            raw_text=node_data["raw_text"],
+            normalized_text=node_data["raw_text"],
+            source="seed",
+            tags=node_data["tags"],
+            metadata_json=metadata,
         )
         db.add(node)
         db.flush()

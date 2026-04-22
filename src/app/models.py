@@ -29,6 +29,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     telegram_chat_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     access_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False), default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False
     )
@@ -77,7 +79,7 @@ class Edge(TimestampMixin, Base):
     workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"), nullable=False, index=True)
     from_node_id: Mapped[int] = mapped_column(ForeignKey("nodes.id"), nullable=False, index=True)
     to_node_id: Mapped[int] = mapped_column(ForeignKey("nodes.id"), nullable=False, index=True)
-    type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     created_by: Mapped[str] = mapped_column(String(128), nullable=False, default="manual")

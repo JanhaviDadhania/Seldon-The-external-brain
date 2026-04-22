@@ -12,20 +12,6 @@ NODE_TYPES = {
     "document",
 }
 
-EDGE_TYPES = {
-    "similar_to",
-    "expands",
-    "contradicts",
-    "supports",
-    "led_to",
-    "belongs_to_topic",
-    "derived_from",
-    "mentions",
-    "inspired_by",
-    "part_of",
-    "reply_to",
-}
-
 
 def validate_node_type(value: str) -> str:
     if value not in NODE_TYPES:
@@ -35,7 +21,7 @@ def validate_node_type(value: str) -> str:
 
 
 def validate_edge_type(value: str) -> str:
-    if value not in EDGE_TYPES:
-        allowed = ", ".join(sorted(EDGE_TYPES))
-        raise ValueError(f"Invalid edge type '{value}'. Allowed: {allowed}")
+    value = value.strip()
+    if not value:
+        raise ValueError("Edge type/note cannot be empty.")
     return value
