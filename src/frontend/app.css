@@ -57,6 +57,7 @@ body {
 #graph-svg {
   display: block;
   background: transparent;
+  overflow: visible;
 }
 
 .floating-panel {

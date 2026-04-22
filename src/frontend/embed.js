@@ -42,7 +42,7 @@ function polarLayout(nodes, width, height) {
   });
 }
 
-function wrapText(text, maxCharsPerLine = 22, maxLines = 5) {
+function wrapText(text, maxCharsPerLine = 22) {
   const words = String(text || "").trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return ["untitled"];
   const lines = [];
@@ -55,19 +55,15 @@ function wrapText(text, maxCharsPerLine = 22, maxLines = 5) {
     }
     if (current) lines.push(current);
     current = word;
-    if (lines.length === maxLines - 1) break;
   }
-  if (current && lines.length < maxLines) lines.push(current);
-  if (lines.length === maxLines && words.join(" ").length > lines.join(" ").length) {
-    lines[maxLines - 1] = `${lines[maxLines - 1].replace(/[.,;:!?]?$/, "")}...`;
-  }
-  return lines.slice(0, maxLines);
+  if (current) lines.push(current);
+  return lines;
 }
 
 function getNoteSize(node) {
   const length = (node.raw_text || node.label || "").length;
   const width = length > 240 ? 206 : 178;
-  const lines = wrapText(node.label || node.raw_text || "");
+  const lines = wrapText(node.raw_text || node.label || "");
   const minHeight = 86;
   const bodyHeight = 26 + lines.length * 20;
   const extra = length > 240 ? 26 : length > 140 ? 12 : 0;
