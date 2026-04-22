@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from .models import Edge, Node, User, Workspace
-from .workspace_ops import get_or_create_workspace, get_or_create_workspace_for_user, set_active_workspace
+from .workspace_ops import get_or_create_workspace, get_or_create_workspace_for_user, set_active_workspace, set_active_workspace_for_user
 
 DEFAULT_USER_EMAIL = "rioname@gmail.com"
 DEFAULT_USER_PASSWORD = "shubham"
@@ -147,6 +147,7 @@ def seed_workspace(db: Session) -> None:
 
 def seed_workspace_for_user(db: Session, user: User) -> None:
     workspace = get_or_create_workspace_for_user(db, SEED_WORKSPACE_NAME, user)
+    set_active_workspace_for_user(db, user, workspace)
 
     existing = db.scalar(
         select(Node).where(Node.workspace_id == workspace.id, Node.status != "deleted").limit(1)

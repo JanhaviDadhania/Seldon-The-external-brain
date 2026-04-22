@@ -393,9 +393,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         db.add(user)
         db.flush()
-        from .workspace_ops import get_or_create_workspace_for_user, set_active_workspace_for_user
-        ws = get_or_create_workspace_for_user(db, "my graph", user)
-        set_active_workspace_for_user(db, user, ws)
+        seed_workspace_for_user(db, user)
         db.commit()
         return LoginResponse(access_token=user.access_token)
 
