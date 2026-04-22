@@ -332,7 +332,7 @@ button:disabled,
 }
 
 .create-node-form textarea,
-.create-node-form input {
+.create-node-form input:not([type="range"]) {
   width: 100%;
   border: 1px solid #e1d3bf;
   background: #fffaf3;
@@ -340,6 +340,18 @@ button:disabled,
   padding: 10px 12px;
   font: inherit;
   color: var(--text);
+}
+
+.create-node-form input[type="range"] {
+  width: 100%;
+  accent-color: var(--action);
+  cursor: pointer;
+}
+
+#edge-weight-display {
+  font-size: 13px;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
 }
 
 .create-node-form textarea {
@@ -696,7 +708,7 @@ button:disabled,
 }
 
 [data-theme="dark"] .create-node-form textarea,
-[data-theme="dark"] .create-node-form input {
+[data-theme="dark"] .create-node-form input:not([type="range"]) {
   background: #1c1914;
   border-color: #2e271e;
 }

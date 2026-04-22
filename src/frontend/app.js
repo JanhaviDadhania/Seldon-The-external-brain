@@ -29,6 +29,7 @@ const edgeSelectionSummary = document.getElementById("edge-selection-summary");
 const createEdgeForm = document.getElementById("create-edge-form");
 const createEdgeType = document.getElementById("create-edge-type");
 const createEdgeWeight = document.getElementById("create-edge-weight");
+const edgeWeightDisplay = document.getElementById("edge-weight-display");
 const createEdgeSubmit = document.getElementById("create-edge-submit");
 const proposalOverlay = document.getElementById("proposal-overlay");
 const closeProposalsButton = document.getElementById("close-proposals-button");
@@ -1338,13 +1339,14 @@ async function createEdgeFromForm(event) {
   }
 
   const weight = Number(createEdgeWeight.value);
+  const w = Number.isFinite(weight) ? weight / 100 : 0.1;
   const body = {
     workspace_id: currentWorkspaceId,
     from_node_id: edgeSourceNodeId,
     to_node_id: edgeTargetNodeId,
     type: createEdgeType.value,
-    weight: Number.isFinite(weight) ? weight : 0.5,
-    confidence: Number.isFinite(weight) ? weight : 0.5,
+    weight: w,
+    confidence: w,
     created_by: "manual_ui",
   };
 
@@ -1361,7 +1363,8 @@ async function createEdgeFromForm(event) {
       throw new Error(detail);
     }
     createEdgeType.value = "related-somehow";
-    createEdgeWeight.value = "0.5";
+    createEdgeWeight.value = "10";
+    edgeWeightDisplay.textContent = "10";
     resetEdgeSelection();
     await loadGraph();
   } catch (error) {
@@ -1470,6 +1473,7 @@ workspaceSelect.addEventListener("change", () => {
 });
 createNodeForm.addEventListener("submit", createNodeFromForm);
 createEdgeForm.addEventListener("submit", createEdgeFromForm);
+createEdgeWeight.addEventListener("input", () => { edgeWeightDisplay.textContent = createEdgeWeight.value; });
 closeProposalsButton.addEventListener("click", closeProposalDrawer);
 detailSaveButton.addEventListener("click", () => { if (activeNodeId) saveNodeEdits(activeNodeId); });
 detailRaw.addEventListener("input", () => {

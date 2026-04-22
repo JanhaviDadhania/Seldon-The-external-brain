@@ -68,8 +68,8 @@
                 <form id="create-edge-form" class="create-node-form">
                   <label for="create-edge-type">Edge Note</label>
                   <input id="create-edge-type" type="text" value="related-somehow" placeholder="describe the relationship…" maxlength="300" />
-                  <label for="create-edge-weight">Weight</label>
-                  <input id="create-edge-weight" type="number" min="0" max="1" step="0.05" value="0.5" />
+                  <label for="create-edge-weight">Weight <span id="edge-weight-display">10</span></label>
+                  <input id="create-edge-weight" type="range" min="0" max="100" step="1" value="10" />
                   <button id="create-edge-submit" type="submit">Save Edge</button>
                 </form>
               </div>
