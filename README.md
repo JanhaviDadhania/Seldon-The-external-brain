@@ -1,3 +1,9 @@
+# seldon, a tool for thought
+
+![seldon](seldon.png)
+
+---
+
 SELDON — CREATOR'S FEATURE LIST
 Reference document for documentation, agent readiness, and onboarding.
 ================================
