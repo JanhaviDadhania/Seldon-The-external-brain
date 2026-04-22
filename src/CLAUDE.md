@@ -2,6 +2,8 @@
 
 Project context for AI assistants. Read this before making any changes.
 
+> **AI memory:** Persistent memory for this project lives in `/.memory/` (hidden directory at repo root). Read `/.memory/MEMORY.md` for the index. It contains feedback rules, feature plans, known issues, and design decisions that are not derivable from the code alone.
+
 ---
 
 ## What this is

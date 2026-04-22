@@ -118,9 +118,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app_settings = settings or get_settings()
     session_factory = create_session_factory(app_settings)
     engine = session_factory.kw["bind"]
+    import os
     frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
-    uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
-    uploads_dir.mkdir(exist_ok=True)
+    _default_uploads = Path(__file__).resolve().parent.parent / "uploads"
+    uploads_dir = Path(os.environ.get("UPLOADS_DIR", str(_default_uploads)))
+    uploads_dir.mkdir(parents=True, exist_ok=True)
 
     def start_model_setup(app: FastAPI) -> None:
         def worker() -> None:
@@ -203,6 +205,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "status": "setting_up",
             "detail": f"Preparing {app_settings.embedding_model_name}",
         }
+        seed_src = Path(__file__).resolve().parent.parent / "seed-uploads"
+        if not seed_src.exists():
+            seed_src = Path(__file__).resolve().parent.parent / "uploads"
+        if seed_src.exists() and seed_src != uploads_dir:
+            for f in seed_src.iterdir():
+                dest = uploads_dir / f.name
+                if not dest.exists():
+                    shutil.copy2(f, dest)
         with session_factory() as db:
             seed_workspace(db)
         with session_factory() as db:
@@ -925,6 +935,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         workspace = require_workspace(db, workspace_id)
         node = require_node(db, node_id, workspace.id)
         if node.status != "deleted":
+            image_path = (node.metadata_json or {}).get("image")
+            if image_path:
+                orphan = uploads_dir / Path(image_path).name
+                if orphan.exists():
+                    orphan.unlink()
             create_node_version(db, node, reason="soft_delete")
             node.status = "deleted"
             sync_node_internal_tags(db, node)
