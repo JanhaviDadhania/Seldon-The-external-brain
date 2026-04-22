@@ -7,7 +7,8 @@ Seldon is a personal knowledge graph. You save notes — via Telegram from anywh
 ## What Seldon does
 
 - Stores notes (called nodes) in a visual force-directed graph
-- Connects notes via typed, weighted edges (supports, contradicts, expands, similar_to, led_to, etc.)
+- Each note supports an image attachment (WhatsApp-style: image at top, caption below) — shown both in the note card and as a thumbnail on the graph node
+- Connects notes via weighted edges with a free-form text note describing the relationship
 - Pulls notes from Telegram — text your bot a thought from anywhere, poll to sync
 - Auto-generates edges between notes using tag matching, embeddings, or LLM scoring
 - Traces paths through connected ideas (path tracing)
@@ -29,8 +30,11 @@ Full OpenAPI spec available at: https://seldon.railway.app/docs
 
 Key endpoints:
 - GET  /graph-data             — full graph (nodes + edges) for a workspace
+- GET  /graph-data/export      — download current workspace as a JSON file (nodes + edges)
 - GET  /nodes                  — list nodes
 - POST /nodes                  — create a node
+- POST /nodes/{id}/image       — attach an image to a note (multipart/form-data)
+- DELETE /nodes/{id}/image     — remove the image from a note
 - GET  /nodes/{id}/neighbors   — direct neighbors of a node
 - GET  /nodes/{id}/subgraph    — traversed subgraph from a root node
 - GET  /edges                  — list edges
@@ -41,10 +45,11 @@ Key endpoints:
 - GET  /link-proposals         — pending auto-generated edge proposals
 - POST /graph/actions/generate-edges — run automatic edge generation
 
-## Edge types
+## Edge notes
 
-similar_to, supports, contradicts, expands, led_to, belongs_to_topic,
-derived_from, mentions, inspired_by, part_of, reply_to
+Edges carry a free-form text note (stored as `edge.type`) describing the relationship,
+e.g. "this challenged my earlier assumption". No fixed vocabulary — any string up to
+300 characters. Weight is 0–1 (stored); the UI presents a 0–100 slider.
 
 ## Edge creation methods (Advanced)
 

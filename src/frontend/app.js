@@ -38,6 +38,11 @@ const proposalList = document.getElementById("proposal-list");
 const detailSaveButton = document.getElementById("detail-save-button");
 const detailTagInput = document.getElementById("detail-tag-input");
 const detailTagAdd = document.getElementById("detail-tag-add");
+const detailImageSection = document.getElementById("detail-image-section");
+const detailImage = document.getElementById("detail-image");
+const detailImageUpload = document.getElementById("detail-image-upload");
+const detailImageInput = document.getElementById("detail-image-input");
+const detailImageRemove = document.getElementById("detail-image-remove");
 
 let activeNodeId = null;
 let currentData = { nodes: [], edges: [] };
@@ -643,6 +648,7 @@ function ensureDefs() {
   defs.appendChild(grid);
 
   svg.appendChild(defs);
+  return defs;
 }
 
 function wrapText(text, maxCharsPerLine = 22) {
@@ -668,6 +674,8 @@ function wrapText(text, maxCharsPerLine = 22) {
   return lines;
 }
 
+const IMAGE_HEIGHT = 120;
+
 function getNoteSize(node) {
   const length = (node.raw_text || node.label || "").length;
   const width = length > 240 ? 206 : 178;
@@ -675,7 +683,8 @@ function getNoteSize(node) {
   const minHeight = 86;
   const bodyHeight = 26 + lines.length * 20;
   const extra = length > 240 ? 26 : length > 140 ? 12 : 0;
-  return { width, height: Math.max(minHeight, bodyHeight + extra), lines };
+  const imageExtra = node.image ? IMAGE_HEIGHT : 0;
+  return { width, height: Math.max(minHeight, bodyHeight + extra) + imageExtra, lines };
 }
 
 function getNoteStyle(node) {
@@ -698,6 +707,19 @@ function renderDetail(node) {
   activeNodeId = node.id;
   emptyState.classList.add("hidden");
   nodeDetail.classList.remove("hidden");
+
+  if (node.image) {
+    detailImage.src = node.image;
+    detailImage.classList.remove("hidden");
+    detailImageUpload.classList.add("hidden");
+    detailImageRemove.classList.remove("hidden");
+  } else {
+    detailImage.src = "";
+    detailImage.classList.add("hidden");
+    detailImageUpload.classList.remove("hidden");
+    detailImageRemove.classList.add("hidden");
+  }
+
   detailRaw.value = node.raw_text;
   detailRaw.style.height = "auto";
   detailRaw.style.height = `${detailRaw.scrollHeight}px`;
@@ -810,7 +832,7 @@ function applyDragPosition(nodeId, x, y) {
 function renderGraph(data) {
   currentData = data;
   clearSvg();
-  ensureDefs();
+  const svgDefs = ensureDefs();
 
   const width = graphCanvas.clientWidth;
   const height = graphCanvas.clientHeight;
@@ -948,10 +970,35 @@ function renderGraph(data) {
       }));
     }
 
+    if (node.image) {
+      const clipId = `node-img-clip-${node.id}`;
+      const clip = svgEl("clipPath", { id: clipId });
+      clip.appendChild(svgEl("rect", {
+        x: -size.width / 2,
+        y: -size.height / 2,
+        width: size.width,
+        height: IMAGE_HEIGHT,
+        rx: 8,
+        ry: 8,
+      }));
+      svgDefs.appendChild(clip);
+      group.appendChild(svgEl("image", {
+        href: node.image,
+        x: -size.width / 2,
+        y: -size.height / 2,
+        width: size.width,
+        height: IMAGE_HEIGHT,
+        preserveAspectRatio: "xMidYMid slice",
+        "clip-path": `url(#${clipId})`,
+      }));
+    }
+
+    const textOffsetY = node.image ? IMAGE_HEIGHT : 0;
+
     if (node.type === "topic") {
       const stamp = svgEl("text", {
         x: -size.width / 2 + 14,
-        y: -size.height / 2 + 16,
+        y: -size.height / 2 + textOffsetY + 16,
         class: "topic-stamp",
       });
       stamp.textContent = "TOPIC";
@@ -960,7 +1007,7 @@ function renderGraph(data) {
 
     const label = svgEl("text", {
       x: -size.width / 2 + 14,
-      y: -size.height / 2 + 24,
+      y: -size.height / 2 + textOffsetY + 24,
       class: "node-label",
     });
 
@@ -1491,6 +1538,34 @@ createEdgeForm.addEventListener("submit", createEdgeFromForm);
 createEdgeWeight.addEventListener("input", () => { edgeWeightDisplay.textContent = createEdgeWeight.value; });
 closeProposalsButton.addEventListener("click", closeProposalDrawer);
 detailSaveButton.addEventListener("click", () => { if (activeNodeId) saveNodeEdits(activeNodeId); });
+detailImageInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file || !activeNodeId) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  try {
+    const response = await fetch(withWorkspace(`/nodes/${activeNodeId}/image`), {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) throw new Error("Upload failed");
+    await loadGraph();
+    const updated = getNodeById(activeNodeId);
+    if (updated) renderDetail(updated);
+  } finally {
+    detailImageInput.value = "";
+  }
+});
+detailImageRemove.addEventListener("click", async () => {
+  if (!activeNodeId) return;
+  const response = await fetch(withWorkspace(`/nodes/${activeNodeId}/image`), {
+    method: "DELETE",
+  });
+  if (!response.ok) return;
+  await loadGraph();
+  const updated = getNodeById(activeNodeId);
+  if (updated) renderDetail(updated);
+});
 detailRaw.addEventListener("input", () => {
   detailRaw.style.height = "auto";
   detailRaw.style.height = `${detailRaw.scrollHeight}px`;

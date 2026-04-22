@@ -30,6 +30,12 @@
           <div class="floating-panel">
             <div id="node-detail" class="node-detail hidden">
               <div class="detail-sheet">
+                <div id="detail-image-section" class="detail-image-section">
+                  <img id="detail-image" class="detail-node-image hidden" alt="" />
+                  <label id="detail-image-upload" class="detail-image-upload" for="detail-image-input">+ Add image</label>
+                  <input id="detail-image-input" type="file" accept="image/*" hidden />
+                  <button id="detail-image-remove" type="button" class="detail-image-remove hidden">×</button>
+                </div>
                 <div class="detail-section">
                   <h4>Note</h4>
                   <textarea id="detail-raw" class="detail-copy detail-edit"></textarea>

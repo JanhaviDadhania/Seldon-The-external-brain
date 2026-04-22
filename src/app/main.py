@@ -6,7 +6,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from threading import Thread
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+import shutil
+
+from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
@@ -117,6 +119,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     session_factory = create_session_factory(app_settings)
     engine = session_factory.kw["bind"]
     frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+    uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
+    uploads_dir.mkdir(exist_ok=True)
 
     def start_model_setup(app: FastAPI) -> None:
         def worker() -> None:
@@ -220,6 +224,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
     def db_dependency(request: Request):
         yield from get_db(request.app.state.session_factory)
@@ -302,6 +307,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "tags": node.tags,
                     "linker_tags": (node.metadata_json.get("linker_tags", {}) or {}),
                     "ui_position": node.metadata_json.get("ui_position") or None,
+                    "image": node.metadata_json.get("image") or None,
                     "source": node.source,
                     "status": node.status,
                 }
@@ -860,6 +866,55 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if node.status != "deleted":
             enqueue_link_job(db, node, settings.candidate_retrieval_limit)
             enqueue_embedding_job(db, node, settings.embedding_model_name)
+        return node
+
+    @app.post("/nodes/{node_id}/image", response_model=NodeRead)
+    async def upload_node_image(
+        node_id: int,
+        file: UploadFile = File(...),
+        workspace_id: int | None = None,
+        db: Session = Depends(db_dependency),
+    ) -> Node:
+        workspace = require_workspace(db, workspace_id)
+        node = require_node(db, node_id, workspace.id)
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="File must be an image")
+        suffix = Path(file.filename).suffix.lower() if file.filename else ".jpg"
+        if suffix not in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
+            suffix = ".jpg"
+        old_image = (node.metadata_json or {}).get("image")
+        if old_image:
+            old_file = uploads_dir / Path(old_image).name
+            if old_file.exists():
+                old_file.unlink()
+        filename = f"{node_id}{suffix}"
+        with (uploads_dir / filename).open("wb") as dest:
+            shutil.copyfileobj(file.file, dest)
+        merged = dict(node.metadata_json or {})
+        merged["image"] = f"/uploads/{filename}"
+        node.metadata_json = merged
+        db.commit()
+        db.refresh(node)
+        return node
+
+    @app.delete("/nodes/{node_id}/image", response_model=NodeRead)
+    def delete_node_image(
+        node_id: int,
+        workspace_id: int | None = None,
+        db: Session = Depends(db_dependency),
+    ) -> Node:
+        workspace = require_workspace(db, workspace_id)
+        node = require_node(db, node_id, workspace.id)
+        image_path = (node.metadata_json or {}).get("image")
+        if image_path:
+            file_path = uploads_dir / Path(image_path).name
+            if file_path.exists():
+                file_path.unlink()
+        merged = dict(node.metadata_json or {})
+        merged.pop("image", None)
+        node.metadata_json = merged
+        db.commit()
+        db.refresh(node)
         return node
 
     @app.delete("/nodes/{node_id}", response_model=NodeRead)

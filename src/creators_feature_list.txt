@@ -126,6 +126,10 @@ Edge types available:
 9. VIEWING AND EDITING A NOTE
 -----------------------------
 Click any node on the graph. A floating card appears at the top right showing:
+  - An image, if one is attached — displayed at the top of the card (WhatsApp-style:
+    image first, caption text below). Click "+ Add image" to attach one; click the ×
+    button overlaid on the image to remove it. One image per note. The image also
+    appears as a thumbnail on the node card in the graph.
   - The full note text (editable — click to type, auto-expands to fit content)
   - Tags attached to the note, each with an × button to remove them.
     Type a tag name in the "add tag" field and press Enter to add a new one.
@@ -289,7 +293,7 @@ Theme preference is saved and restored on every visit.
 
 THINGS NOT YET SUPPORTED
 --------------------------
-  - Images, voice notes, or files via Telegram
+  - Images, voice notes, or files via Telegram (images can be attached via the app)
   - Shift+click to create edges (planned)
   - Real-time auto-polling from Telegram (currently manual poll)
   - Narrative generation in the deployed version (Ollama dependency)

@@ -20,6 +20,7 @@ SEED_NODES = [
         "raw_text": "Are humans better than other animals?",
         "type": "idea",
         "tags": ["evolution", "biology", "humans", "thinking"],
+        "image": "/uploads/seldon.jpg",
     },
     {
         "raw_text": "We have better analytical capabilities — we think longer, harder, and weirder than any other animal.",
@@ -113,6 +114,9 @@ def seed_workspace(db: Session) -> None:
 
     created_nodes = []
     for node_data in SEED_NODES:
+        metadata: dict = {}
+        if node_data.get("image"):
+            metadata["image"] = node_data["image"]
         node = Node(
             workspace_id=workspace.id,
             type=node_data["type"],
@@ -120,7 +124,7 @@ def seed_workspace(db: Session) -> None:
             normalized_text=node_data["raw_text"],
             source="seed",
             tags=node_data["tags"],
-            metadata_json={},
+            metadata_json=metadata,
         )
         db.add(node)
         db.flush()
