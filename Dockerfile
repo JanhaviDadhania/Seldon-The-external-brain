@@ -11,8 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/app ./app
 COPY src/frontend ./frontend
+COPY src/uploads ./seed-uploads
 
-RUN mkdir -p /data && mkdir -p /app/data
+RUN mkdir -p /data && mkdir -p /app/data && mkdir -p /data/uploads
 
 EXPOSE 8000
 

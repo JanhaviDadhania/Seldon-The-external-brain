@@ -14,3 +14,7 @@ value = "sqlite:////data/twitter_poster.db"
 [[deploy.envVars]]
 name = "TWITTER_POSTER_PUBLIC_URL"
 value = "https://seldon.railway.app"
+
+[[deploy.envVars]]
+name = "UPLOADS_DIR"
+value = "/data/uploads"
