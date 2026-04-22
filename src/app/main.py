@@ -111,7 +111,7 @@ from .workspace_ops import (
     switch_workspace_by_name,
     switch_workspace_for_user,
 )
-from .seed_ops import seed_default_user, seed_workspace
+from .seed_ops import seed_default_user, seed_workspace, seed_workspace_for_user
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -171,6 +171,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             db.commit()
                             db.refresh(user)
                             if is_new:
+                                seed_workspace_for_user(db, user)
                                 first_name = (message.get("from") or {}).get("first_name", "")
                                 graph_url = f"{app_settings.public_url}/graph?token={user.access_token}"
                                 welcome = (

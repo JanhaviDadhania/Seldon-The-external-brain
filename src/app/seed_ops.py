@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from .models import Edge, Node, User, Workspace
-from .workspace_ops import get_or_create_workspace, set_active_workspace
+from .workspace_ops import get_or_create_workspace, get_or_create_workspace_for_user, set_active_workspace
 
 DEFAULT_USER_EMAIL = "rioname@gmail.com"
 DEFAULT_USER_PASSWORD = "shubham"
@@ -110,6 +110,48 @@ def seed_workspace(db: Session) -> None:
     )
     if existing is not None:
         db.commit()
+        return
+
+    created_nodes = []
+    for node_data in SEED_NODES:
+        metadata: dict = {}
+        if node_data.get("image"):
+            metadata["image"] = node_data["image"]
+        node = Node(
+            workspace_id=workspace.id,
+            type=node_data["type"],
+            raw_text=node_data["raw_text"],
+            normalized_text=node_data["raw_text"],
+            source="seed",
+            tags=node_data["tags"],
+            metadata_json=metadata,
+        )
+        db.add(node)
+        db.flush()
+        created_nodes.append(node)
+
+    for from_idx, to_idx, edge_type, weight in SEED_EDGES:
+        edge = Edge(
+            workspace_id=workspace.id,
+            from_node_id=created_nodes[from_idx].id,
+            to_node_id=created_nodes[to_idx].id,
+            type=edge_type,
+            weight=weight,
+            confidence=weight,
+            created_by="seed",
+        )
+        db.add(edge)
+
+    db.commit()
+
+
+def seed_workspace_for_user(db: Session, user: User) -> None:
+    workspace = get_or_create_workspace_for_user(db, SEED_WORKSPACE_NAME, user)
+
+    existing = db.scalar(
+        select(Node).where(Node.workspace_id == workspace.id, Node.status != "deleted").limit(1)
+    )
+    if existing is not None:
         return
 
     created_nodes = []
