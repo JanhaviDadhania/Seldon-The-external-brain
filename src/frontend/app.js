@@ -36,6 +36,7 @@ const proposalOverlay = document.getElementById("proposal-overlay");
 const closeProposalsButton = document.getElementById("close-proposals-button");
 const proposalList = document.getElementById("proposal-list");
 const detailSaveButton = document.getElementById("detail-save-button");
+const detailDeleteButton = document.getElementById("detail-delete-button");
 const detailTagInput = document.getElementById("detail-tag-input");
 const detailTagAdd = document.getElementById("detail-tag-add");
 const detailImageSection = document.getElementById("detail-image-section");
@@ -727,6 +728,7 @@ function renderDetail(node) {
   renderTags(activeTagValues(node), developerMode ? "no linker tags" : "untagged");
   detailTagAdd.classList.toggle("hidden", developerMode);
   detailSaveButton.classList.toggle("hidden", developerMode);
+  detailDeleteButton.classList.toggle("hidden", developerMode);
   const hasNarrative = narrativeNodeId === node.id && (narrativeLoading || narrativeError || narrativeText);
   detailNarrativeSection.classList.toggle("hidden", !hasNarrative);
   if (hasNarrative) {
@@ -1451,6 +1453,35 @@ async function saveNodeEdits(nodeId) {
     detailSaveButton.disabled = false;
   }
 }
+
+async function deleteActiveNode(nodeId) {
+  if (!nodeId) return;
+  if (!confirm("Delete this note? Its edges will be removed too.")) return;
+
+  detailDeleteButton.disabled = true;
+  try {
+    const response = await fetch(withWorkspace(`/nodes/${nodeId}`), { method: "DELETE" });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.detail || `Delete failed: ${response.status}`);
+    }
+    activeNodeId = null;
+    if (edgeSourceNodeId === nodeId) {
+      edgeSourceNodeId = null;
+      edgeTargetNodeId = null;
+      updateEdgeSelectionUi();
+    }
+    await loadGraph();
+    renderGraph(currentData);
+  } catch (error) {
+    emptyState.classList.remove("hidden");
+    emptyState.textContent = error.message;
+  } finally {
+    detailDeleteButton.disabled = false;
+  }
+}
+
+detailDeleteButton.addEventListener("click", () => { if (activeNodeId) deleteActiveNode(activeNodeId); });
 
 pollTelegramButton.addEventListener("click", pollTelegram);
 generateEdgesButton.addEventListener("click", generateEdges);
