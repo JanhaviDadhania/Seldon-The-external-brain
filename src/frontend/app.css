@@ -614,10 +614,20 @@ button:disabled,
   color: var(--muted);
 }
 
+.detail-actions {
+  display: flex;
+  gap: 16px;
+}
+
 .detail-save {
-  justify-self: start;
   padding: 0;
   font-size: 15px;
+}
+
+.detail-delete {
+  padding: 0;
+  font-size: 15px;
+  color: #a3543f;
 }
 
 .detail-image-section {
