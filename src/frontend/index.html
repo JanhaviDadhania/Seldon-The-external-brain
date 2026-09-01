@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Seldon | External Brain</title>
     <meta name="description" content="External brain for your brain :) See your ideas, generate new ones, find connections, find themes." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -36,6 +36,7 @@
                   <input id="detail-image-input" type="file" accept="image/*" hidden />
                   <button id="detail-image-remove" type="button" class="detail-image-remove hidden">×</button>
                 </div>
+                <button id="detail-close-button" type="button" class="detail-close" aria-label="Close note">✕</button>
                 <div class="detail-section">
                   <h4>Note</h4>
                   <textarea id="detail-raw" class="detail-copy detail-edit"></textarea>
@@ -47,7 +48,24 @@
                     <input id="detail-tag-input" type="text" placeholder="+ add tag" />
                   </div>
                 </div>
-                <button id="detail-save-button" type="button" class="detail-save hidden">Save</button>
+                <div class="detail-actions">
+                  <button id="detail-save-button" type="button" class="detail-save hidden">Save</button>
+                  <button id="detail-delete-button" type="button" class="detail-delete hidden">Delete</button>
+                </div>
+                <div id="edge-form-section" class="detail-section edge-form-wrap hidden">
+                  <h4 id="edge-selection-heading">Connect</h4>
+                  <div id="edge-selection-summary" class="edge-selection-summary">Select two nodes.</div>
+                  <form id="create-edge-form" class="create-node-form">
+                    <label for="create-edge-type">Edge Note</label>
+                    <input id="create-edge-type" type="text" value="related-somehow" placeholder="describe the relationship…" maxlength="300" />
+                    <label for="create-edge-weight">Weight <span id="edge-weight-display">10</span></label>
+                    <input id="create-edge-weight" type="range" min="0" max="100" step="1" value="10" />
+                    <div class="detail-actions">
+                      <button id="create-edge-submit" type="submit">Save Edge</button>
+                      <button id="edge-cancel-button" type="button" class="detail-delete">Cancel</button>
+                    </div>
+                  </form>
+                </div>
                 <div id="detail-narrative-section" class="detail-section hidden">
                   <h4>Narrative</h4>
                   <div id="detail-narrative" class="detail-narrative"></div>
@@ -64,19 +82,6 @@
                     <input id="create-node-time" type="text" placeholder="2017 or 2017-06-12 or June 2017" />
                   </div>
                   <button id="create-node-submit" type="submit">Add Note</button>
-                </form>
-              </div>
-            </div>
-            <div id="edge-form-sheet" class="detail-sheet create-node-sheet hidden">
-              <div class="detail-section create-node-section">
-                <h4>Create Edge</h4>
-                <div id="edge-selection-summary" class="edge-selection-summary">Select two nodes.</div>
-                <form id="create-edge-form" class="create-node-form">
-                  <label for="create-edge-type">Edge Note</label>
-                  <input id="create-edge-type" type="text" value="related-somehow" placeholder="describe the relationship…" maxlength="300" />
-                  <label for="create-edge-weight">Weight <span id="edge-weight-display">10</span></label>
-                  <input id="create-edge-weight" type="range" min="0" max="100" step="1" value="10" />
-                  <button id="create-edge-submit" type="submit">Save Edge</button>
                 </form>
               </div>
             </div>

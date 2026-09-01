@@ -184,6 +184,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                 )
                                 await send_telegram_message(app_settings, chat_id, welcome)
                             result = ingest_telegram_update_with_embeddings(db, app_settings, update, user=user)
+                            if result.outcome == "ignored" and result.detail.startswith(("http://", "https://")):
+                                await send_telegram_message(app_settings, chat_id, f"Open your graph:\n{result.detail}")
                         else:
                             result = ingest_telegram_update_with_embeddings(db, app_settings, update)
                     update_id = update.get("update_id")
@@ -690,6 +692,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         for update in updates:
             result = ingest_telegram_update_with_embeddings(db, settings, update)
+            if result.outcome == "ignored" and result.detail.startswith(("http://", "https://")):
+                message = update.get("message") or {}
+                chat_id = (message.get("chat") or {}).get("id")
+                if chat_id is not None:
+                    await send_telegram_message(settings, chat_id, f"Open your graph:\n{result.detail}")
             if result.outcome == "created":
                 created += 1
             elif result.outcome == "duplicate":
