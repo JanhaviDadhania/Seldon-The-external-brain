@@ -33,6 +33,31 @@ SWITCH_WORKSPACE_TIMEAWARE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SWITCH_TO_WORKSPACE_PATTERN = re.compile(r"^\s*switch\s+to\s+(.+?)\s*$", re.IGNORECASE)
+GRAPH_LINK_PATTERN = re.compile(r"^\s*/?graph\s+link\s*$|^\s*/?graph\s*$", re.IGNORECASE)
+
+
+def resolve_public_base_url(settings: Settings | None) -> str:
+    configured = (settings.public_url if settings else "") or ""
+    if configured and not configured.startswith("http://localhost") and not configured.startswith("http://127."):
+        return configured
+
+    import socket
+
+    candidates = []
+    hostname = socket.gethostname()
+    try:
+        for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
+            addr = info[4][0]
+            if addr not in candidates and not addr.startswith("127."):
+                candidates.append(addr)
+    except socket.gaierror:
+        pass
+    for addr in candidates:
+        if not addr.startswith("172."):
+            return f"http://{addr}:8000"
+    if candidates:
+        return f"http://{candidates[0]}:8000"
+    return "http://127.0.0.1:8000"
 
 
 @dataclass
@@ -180,6 +205,24 @@ def ingest_telegram_update(
         )
 
     explicit_node_type, input_text = extract_explicit_node_type(text)
+    if GRAPH_LINK_PATTERN.match(input_text) and user is not None:
+        graph_url = f"{resolve_public_base_url(settings)}/graph?token={user.access_token}"
+        job = IngestionJob(
+            source="telegram",
+            source_event_id=source_event_id,
+            status="processed_command",
+            payload_json={**base_payload, "command": "graph_link"},
+            error_message=None,
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        return TelegramIngestResult(
+            outcome="ignored",
+            detail=graph_url,
+            update_id=update_id,
+            ingestion_job=job,
+        )
     workspace_switch_command = extract_workspace_switch_command(input_text)
     if workspace_switch_command:
         mode, workspace_name = workspace_switch_command

@@ -25,7 +25,8 @@ const createNodeText = document.getElementById("create-node-text");
 const createNodeTimeWrap = document.getElementById("create-node-time-wrap");
 const createNodeTime = document.getElementById("create-node-time");
 const createNodeSubmit = document.getElementById("create-node-submit");
-const edgeFormSheet = document.getElementById("edge-form-sheet");
+const edgeFormSheet = document.getElementById("edge-form-section");
+const edgeCancelButton = document.getElementById("edge-cancel-button");
 const edgeSelectionSummary = document.getElementById("edge-selection-summary");
 const createEdgeForm = document.getElementById("create-edge-form");
 const createEdgeType = document.getElementById("create-edge-type");
@@ -37,6 +38,7 @@ const closeProposalsButton = document.getElementById("close-proposals-button");
 const proposalList = document.getElementById("proposal-list");
 const detailSaveButton = document.getElementById("detail-save-button");
 const detailDeleteButton = document.getElementById("detail-delete-button");
+const detailCloseButton = document.getElementById("detail-close-button");
 const detailTagInput = document.getElementById("detail-tag-input");
 const detailTagAdd = document.getElementById("detail-tag-add");
 const detailImageSection = document.getElementById("detail-image-section");
@@ -226,6 +228,70 @@ function clampZoom(value) {
 function setGraphZoom(value) {
   graphZoom = clampZoom(value);
   window.localStorage.setItem("graphZoom", String(graphZoom));
+}
+
+function applyGraphTransform() {
+  svg.style.transform = `translate(${panX}px, ${panY}px) scale(${graphZoom})`;
+}
+
+function canvasPointFromTouch(touch) {
+  const rect = graphCanvas.getBoundingClientRect();
+  return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+}
+
+let touchPanState = null;
+
+function handleTouchStart(e) {
+  if (e.touches.length === 1) {
+    touchPanState = { mode: "pan", startX: e.touches[0].clientX, startY: e.touches[0].clientY, startPanX: panX, startPanY: panY, moved: false };
+  } else if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    touchPanState = {
+      mode: "pinch",
+      startDist: Math.hypot(dx, dy),
+      startZoom: graphZoom,
+      centerX: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+      centerY: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      startPanX: panX,
+      startPanY: panY,
+    };
+  } else {
+    touchPanState = null;
+  }
+}
+
+function handleTouchMove(e) {
+  if (!touchPanState) return;
+  if (touchPanState.mode === "pinch") {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.hypot(dx, dy);
+    if (!dist || !touchPanState.startDist) return;
+    const rect = graphCanvas.getBoundingClientRect();
+    const cx = touchPanState.centerX - rect.left;
+    const cy = touchPanState.centerY - rect.top;
+    const scale = clampZoom(touchPanState.startZoom * (dist / touchPanState.startDist));
+    panX = cx - (cx - touchPanState.startPanX) * (scale / touchPanState.startZoom);
+    panY = cy - (cy - touchPanState.startPanY) * (scale / touchPanState.startZoom);
+    setGraphZoom(scale);
+    applyGraphTransform();
+  } else if (touchPanState.mode === "pan") {
+    const dx = e.touches[0].clientX - touchPanState.startX;
+    const dy = e.touches[0].clientY - touchPanState.startY;
+    if (Math.hypot(dx, dy) > 6) {
+      touchPanState.moved = true;
+      e.preventDefault();
+      panX = touchPanState.startPanX + dx;
+      panY = touchPanState.startPanY + dy;
+      applyGraphTransform();
+    }
+  }
+}
+
+function handleTouchEnd() {
+  touchPanState = null;
 }
 
 function edgeSelectionNode(nodeId) {
@@ -889,9 +955,12 @@ function renderGraph(data) {
   svg.style.minWidth = `${contentWidth}px`;
 
   if (graphNeedsCenter) {
-    setGraphZoom(1);
-    panX = (width - contentWidth) / 2;
-    panY = (height - contentHeight) / 2;
+    const fitZoom = clampZoom(Math.min(width / contentWidth, height / contentHeight) * 0.95);
+    const useFit = window.matchMedia("(max-width: 720px)").matches || fitZoom < 1;
+    setGraphZoom(useFit ? fitZoom : 1);
+    const zoom = useFit ? fitZoom : 1;
+    panX = (width - contentWidth * zoom) / 2;
+    panY = (height - contentHeight * zoom) / 2;
     graphNeedsCenter = false;
   }
 
@@ -1024,6 +1093,43 @@ function renderGraph(data) {
 
     group.appendChild(label);
     group.addEventListener("mousedown", (e) => startNodeDrag(e, node));
+    group.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      const rect = graphCanvas.getBoundingClientRect();
+      const svgX = (e.touches[0].clientX - rect.left - panX) / graphZoom;
+      const svgY = (e.touches[0].clientY - rect.top - panY) / graphZoom;
+      const pos = nodePositions.get(node.id) || { x: node.x, y: node.y };
+      dragNodeId = node.id;
+      dragHasMoved = false;
+      dragOffsetX = svgX - pos.x;
+      dragOffsetY = svgY - pos.y;
+      e.stopPropagation();
+    }, { passive: true });
+    group.addEventListener("touchmove", (e) => {
+      if (!dragNodeId || dragNodeId !== node.id || !e.touches.length) return;
+      e.preventDefault();
+      const rect = graphCanvas.getBoundingClientRect();
+      const svgX = (e.touches[0].clientX - rect.left - panX) / graphZoom;
+      const svgY = (e.touches[0].clientY - rect.top - panY) / graphZoom;
+      const newX = svgX - dragOffsetX;
+      const newY = svgY - dragOffsetY;
+      if (!dragHasMoved) {
+        const old = nodePositions.get(dragNodeId) || { x: 0, y: 0 };
+        if (Math.hypot(newX - old.x, newY - old.y) * graphZoom > 10) dragHasMoved = true;
+      }
+      if (dragHasMoved) applyDragPosition(dragNodeId, newX, newY);
+    }, { passive: false });
+    group.addEventListener("touchend", (e) => {
+      if (dragNodeId && dragNodeId === node.id && dragHasMoved) {
+        justDragged = true;
+        const pos = nodePositions.get(dragNodeId);
+        if (pos) saveNodePosition(dragNodeId, pos.x, pos.y);
+        renderGraph(currentData);
+        setTimeout(() => { justDragged = false; }, 400);
+      }
+      dragNodeId = null;
+      dragHasMoved = false;
+    });
     group.addEventListener("click", () => {
       if (justDragged) { justDragged = false; return; }
       handleNodeSelection(node);
@@ -1031,7 +1137,7 @@ function renderGraph(data) {
     svg.appendChild(group);
   });
 
-  if (!activeNodeId && layoutNodes.length > 0) {
+  if (!activeNodeId && layoutNodes.length > 0 && window.matchMedia("(min-width: 721px)").matches) {
     renderDetail(layoutNodes[0]);
   }
   updateEdgeSelectionUi();
@@ -1466,6 +1572,7 @@ async function deleteActiveNode(nodeId) {
       throw new Error(payload?.detail || `Delete failed: ${response.status}`);
     }
     activeNodeId = null;
+    nodeDetail.classList.add("hidden");
     if (edgeSourceNodeId === nodeId) {
       edgeSourceNodeId = null;
       edgeTargetNodeId = null;
@@ -1480,6 +1587,14 @@ async function deleteActiveNode(nodeId) {
     detailDeleteButton.disabled = false;
   }
 }
+
+function closeDetail() {
+  activeNodeId = null;
+  nodeDetail.classList.add("hidden");
+  document.querySelectorAll(".node-card.is-active").forEach((card) => card.classList.remove("is-active"));
+}
+
+detailCloseButton.addEventListener("click", closeDetail);
 
 detailDeleteButton.addEventListener("click", () => { if (activeNodeId) deleteActiveNode(activeNodeId); });
 
@@ -1512,6 +1627,23 @@ document.addEventListener("mouseup", () => {
   dragNodeId = null;
   dragHasMoved = false;
 });
+function cancelEdgeSelection() {
+  resetEdgeSelection();
+  renderGraph(currentData);
+}
+
+edgeCancelButton.addEventListener("click", cancelEdgeSelection);
+
+graphCanvas.addEventListener("click", (e) => {
+  if (e.target !== svg) return;
+  if (!nodeDetail.classList.contains("hidden")) closeDetail();
+  if (!addNodeSheet.classList.contains("hidden")) addNodeSheet.classList.add("hidden");
+  if (edgeSourceNodeId || edgeTargetNodeId) cancelEdgeSelection();
+});
+graphCanvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+graphCanvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+graphCanvas.addEventListener("touchend", handleTouchEnd);
+graphCanvas.addEventListener("touchcancel", handleTouchEnd);
 graphCanvas.addEventListener("wheel", (e) => {
   e.preventDefault();
   const rect = graphCanvas.getBoundingClientRect();
@@ -1534,6 +1666,18 @@ graphCanvas.addEventListener("wheel", (e) => {
 }, { passive: false });
 narrativeModeButton.addEventListener("click", toggleNarrativeMode);
 pathTracingButton.addEventListener("click", togglePathTracingMode);
+document.querySelectorAll(".fab-btn").forEach((btn) => {
+  let pressTimer = null;
+  btn.addEventListener("touchstart", () => {
+    pressTimer = setTimeout(() => btn.classList.add("is-pressed"), 350);
+  }, { passive: true });
+  const clearPress = () => {
+    if (pressTimer) clearTimeout(pressTimer);
+    setTimeout(() => btn.classList.remove("is-pressed"), 1200);
+  };
+  btn.addEventListener("touchend", clearPress);
+  btn.addEventListener("touchcancel", clearPress);
+});
 toggleAddNodeButton.addEventListener("click", () => {
   addNodeSheet.classList.toggle("hidden");
 });
