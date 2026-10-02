@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Seldon — Architecture Diagram</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel2: #1e222c;
+    --border: #2c313d;
+    --accent: #7dd3fc;
+    --accent2: #fbbf24;
+    --accent3: #86efac;
+    --accent4: #f472b6;
+    --accent5: #c084fc;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --mono: "SF Mono", "Fira Code", Consolas, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 56px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 16px;
+    z-index: 1000;
+  }
+  #topbar h1 {
+    font-size: 15px; margin: 0; font-weight: 600; color: var(--text);
+    white-space: nowrap;
+  }
+  #topbar .sub {
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+  }
+  #topbar button {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  #topbar button:hover { background: #262b36; border-color: var(--accent); }
+  #zoomlabel {
+    font-size: 11px; color: var(--muted); min-width: 48px; text-align: center;
+  }
+  #hint {
+    margin-left: auto;
+    font-size: 11px; color: var(--muted);
+  }
+
+  #viewport {
+    position: absolute; top: 56px; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    cursor: grab;
+    background-image:
+      radial-gradient(circle, #20242e 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  #viewport.dragging { cursor: grabbing; }
+  #canvas {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+    width: 3400px;
+    height: 2250px;
+  }
+
+  .box {
+    position: absolute;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  }
+  .box h2 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .box .desc {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .box .num {
+    font-family: var(--mono);
+    color: var(--accent2);
+    background: rgba(251,191,36,0.08);
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
+
+  .top-level { border-color: var(--accent); }
+  .top-level h2 { color: var(--accent); }
+  .worker-box { border-color: var(--accent3); }
+  .worker-box h2 { color: var(--accent3); }
+  .memory-box { border-color: var(--accent4); }
+  .memory-box h2 { color: var(--accent4); }
+  .her-box { border-color: var(--accent2); }
+  .her-box h2 { color: var(--accent2); }
+  .frontend-box { border-color: var(--accent5); }
+  .frontend-box h2 { color: var(--accent5); }
+
+  svg.arrows {
+    position: absolute;
+    top: 0; left: 0;
+    width: 3400px;
+    height: 2250px;
+    pointer-events: none;
+  }
+
+  /* expandable detail panels */
+  details.panel {
+    margin-top: 6px;
+    border-top: 1px dashed var(--border);
+    padding-top: 6px;
+  }
+  details.panel > summary {
+    cursor: pointer;
+    font-size: 11.5px;
+    color: var(--accent);
+    list-style: none;
+    user-select: none;
+  }
+  details.panel > summary::-webkit-details-marker { display: none; }
+  details.panel > summary::before {
+    content: "▸ ";
+    display: inline-block;
+    transition: transform 0.15s ease;
+  }
+  details.panel[open] > summary::before {
+    content: "▾ ";
+  }
+  details.panel .inner {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.55;
+    padding: 6px 2px 2px 10px;
+  }
+  details.panel .inner table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6px 0;
+  }
+  details.panel .inner table td, details.panel .inner table th {
+    border: 1px solid var(--border);
+    padding: 3px 6px;
+    font-size: 10.5px;
+    text-align: left;
+  }
+  details.panel .inner code {
+    font-family: var(--mono);
+    background: #0b0d11;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: var(--accent3);
+  }
+  details.panel .inner .const {
+    color: var(--accent2);
+    font-weight: 600;
+  }
+  details.panel .inner ul {
+    margin: 4px 0 4px 16px;
+    padding: 0;
+  }
+  details.panel .inner li { margin-bottom: 3px; }
+
+  /* nested detail indentation */
+  details.panel details.panel {
+    margin-left: 4px;
+  }
+
+  #minimap {
+    position: fixed;
+    bottom: 14px; right: 14px;
+    width: 180px; height: 110px;
+    background: rgba(23,26,33,0.85);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    z-index: 999;
+    overflow: hidden;
+  }
+  #minimap .mmbox {
+    position: absolute;
+    background: rgba(125,211,252,0.25);
+    border: 1px solid var(--accent);
+  }
+  #minimap .mmview {
+    position: absolute;
+    border: 1px solid var(--accent2);
+    background: rgba(251,191,36,0.08);
+  }
+
+  .legend {
+    position: fixed;
+    bottom: 14px; left: 14px;
+    background: rgba(23,26,33,0.9);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 10.5px;
+    color: var(--muted);
+    z-index: 999;
+    max-width: 340px;
+    line-height: 1.5;
+  }
+  .legend b { color: var(--text); }
+  .legend .swatch {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 2px;
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>Seldon — Architecture</h1>
+  <span class="sub">Telegram / app → FastAPI nodes+edges → SQLite graph → force-directed canvas. Click/expand boxes for detail.</span>
+  <button id="zoomout">−</button>
+  <span id="zoomlabel">100%</span>
+  <button id="zoomin">+</button>
+  <button id="reset">Reset view</button>
+  <button id="expandall">Expand all</button>
+  <button id="collapseall">Collapse all</button>
+  <span id="hint">drag to pan · scroll/pinch to zoom · click ▸ to expand</span>
+</div>
+
+<div id="viewport">
+  <div id="canvas">
+    <svg class="arrows" id="arrowsvg">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#9ca3af"/>
+        </marker>
+      </defs>
+      <!-- telegram/app -> fastapi -->
+      <line x1="230" y1="140" x2="420" y2="140" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <!-- fastapi -> ingestion / node creation -->
+      <line x1="770" y1="140" x2="900" y2="140" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <!-- fastapi -> models/db -->
+      <line x1="1110" y1="140" x2="1260" y2="140" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <!-- node create -> embedding job + link job queue -->
+      <line x1="960" y1="200" x2="960" y2="330" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <!-- jobs -> edge creation ops -->
+      <path d="M1060,390 C1200,390 1200,200 1340,200" stroke="#86efac" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="4 3"/>
+      <!-- db -> frontend graph -->
+      <path d="M1340,200 C1340,460 450,460 450,330" stroke="#f472b6" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="4 3"/>
+      <!-- frontend graph -> traversal/advanced -->
+      <line x1="620" y1="780" x2="620" y2="763" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)" stroke-dasharray="4 3"/>
+      <!-- auto poll loop -> telegram -->
+      <path d="M560,200 C560,40 260,40 260,90" stroke="#c084fc" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="4 3"/>
+      <!-- underline -->
+      <line x1="230" y1="900" x2="2100" y2="900" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="2 4"/>
+    </svg>
+
+    <!-- ══════════ TOP LEVEL ══════════ -->
+
+    <div class="box her-box" style="left:60px; top:90px; width:170px;">
+      <h2>📱 Telegram bot</h2>
+      <div class="desc">Primary input channel. Any text message becomes a note. Also understands workspace-switch commands and <code>topic: </code> prefixes.</div>
+    </div>
+
+    <div class="box top-level" style="left:420px; top:60px; width:350px;">
+      <h2>⚙️ FastAPI app — <span class="num">app/main.py</span></h2>
+      <div class="desc">
+        <code>create_app()</code> builds the FastAPI instance (title "Seldon"), mounts
+        <code>/static</code> (frontend) and <code>/uploads</code>, and registers every route.
+        Single global <code>app = create_app()</code> at module bottom is the ASGI entrypoint
+        run by <code>uvicorn app.main:app</code>.
+      </div>
+
+      <details class="panel">
+        <summary>Expand: lifespan startup sequence</summary>
+        <div class="inner">
+          <p><code>@asynccontextmanager lifespan()</code> runs on boot:</p>
+          <ul>
+            <li><code>init_db(session_factory)</code> — creates tables, runs SQLite migrations, backfills <code>workspace_id</code> columns</li>
+            <li>Copies <code>src/uploads</code> (seed images) into the runtime uploads dir if not already present</li>
+            <li><code>seed_workspace(db)</code> — creates/activates the <code>"humans (default)"</code> workspace with its 9 seed nodes + 9 seed edges, if empty</li>
+            <li><code>seed_default_user(db)</code> — creates the default account (<code>rioname@gmail.com</code>) and attaches any ownerless workspaces to it</li>
+            <li><code>start_model_setup(app)</code> — background thread warms the sentence-transformer embedding model (skipped unless <code>preload_embedding_model_on_startup</code> is true)</li>
+            <li><code>asyncio.create_task(auto_poll_loop(app))</code> — background Telegram poller (see box below)</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>Expand: routes by area</summary>
+        <div class="inner">
+          <table>
+            <tr><th>Area</th><th>Routes</th></tr>
+            <tr><td>Pages</td><td><code>GET /</code> (landing.html), <code>/graph</code> (index.html), <code>/advanced</code>, <code>/embed</code>, <code>/login</code></td></tr>
+            <tr><td>Auth</td><td><code>POST /auth/login</code>, <code>POST /auth/register</code> — bcrypt password hash, returns <code>access_token</code></td></tr>
+            <tr><td>Workspaces</td><td><code>GET /workspaces</code>, <code>/workspaces/current</code>, <code>POST /workspaces/switch</code></td></tr>
+            <tr><td>Graph</td><td><code>GET /graph-data</code>, <code>/graph-data/export</code>, <code>/embed/graph-data</code>, <code>POST /graph/actions/generate-edges</code></td></tr>
+            <tr><td>Nodes</td><td><code>POST/GET/PATCH/DELETE /nodes</code>, <code>/nodes/{id}/image</code>, <code>/nodes/{id}/versions</code></td></tr>
+            <tr><td>Edges</td><td><code>POST/GET/DELETE /edges</code></td></tr>
+            <tr><td>Telegram</td><td><code>GET /telegram/config</code>, <code>POST /telegram/ingest</code>, <code>POST /telegram/poll</code></td></tr>
+            <tr><td>Embeddings/Links</td><td><code>/embeddings/config</code>, <code>/nodes/{id}/embeddings</code>, <code>/link-jobs/process</code>, <code>/link-proposals</code></td></tr>
+            <tr><td>Traversal</td><td><code>/nodes/{id}/neighbors</code>, <code>/nodes/{id}/subgraph</code>, <code>/nodes/{id}/candidates</code></td></tr>
+            <tr><td>Articles</td><td><code>/outlines/plan</code>, <code>/article-drafts</code> (+ versions, export)</td></tr>
+            <tr><td>Narrative</td><td><code>POST /narratives/generate</code> (Ollama-backed, hidden in prod)</td></tr>
+            <tr><td>Edge creation</td><td><code>POST /edge-creation/{function_name}</code></td></tr>
+            <tr><td>Misc</td><td><code>/health</code>, <code>/setup-status</code>, <code>/ontology</code>, <code>/llms.txt</code>, <code>/robots.txt</code></td></tr>
+          </table>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>Expand: auth model &amp; per-user workspaces</summary>
+        <div class="inner">
+          <p>Two parallel paths exist in the route handlers: an anonymous/global path
+          (<code>get_active_workspace(db)</code> — one shared active workspace, the historical default)
+          and a per-user path (<code>token</code> query param → <code>get_user_from_token</code> →
+          <code>get_active_workspace_for_user(db, user)</code>). <code>User.access_token</code> is a
+          <code>secrets.token_urlsafe(32)</code> bearer token; <code>User.password_hash</code> is bcrypt
+          via <code>auth_login</code>/<code>auth_register</code>. New email registrations and new Telegram
+          chat ids both get <code>seed_workspace_for_user()</code> — their own private clone of the
+          "humans (default)" seed graph (per-user workspaces are named <code>u{id}:{name}</code>
+          internally to dodge the global unique-name constraint on <code>workspaces.name</code>).</p>
+        </div>
+      </details>
+    </div>
+
+    <!-- AUTO POLL LOOP -->
+    <div class="box" style="left:420px; top:780px; width:300px; border-color:#c084fc;">
+      <h2 style="color:#c084fc;">🔁 auto_poll_loop (background task)</h2>
+      <div class="desc">
+        <code>asyncio.sleep(30)</code> loop started in <code>lifespan()</code>. Every 30s, if a bot
+        token is configured, fetches new Telegram updates from the stored offset and ingests them —
+        independent of the manual <b>Poll Telegram</b> button in the app.
+      </div>
+      <details class="panel">
+        <summary>Expand: per-chat onboarding</summary>
+        <div class="inner">
+          <p>For each update's <code>chat.id</code>, <code>get_or_create_user()</code> looks up or creates
+          a <code>User</code> keyed on <code>telegram_chat_id</code>. A brand-new chat triggers
+          <code>seed_workspace_for_user()</code> and a welcome DM via <code>send_telegram_message()</code>
+          containing a personal graph link: <code>{public_url}/graph?token={access_token}</code>. Any
+          exception in the loop body is swallowed (<code>except Exception: pass</code>) so one bad update
+          can't kill the poller.</p>
+        </div>
+      </details>
+    </div>
+
+    <!-- INGESTION -->
+    <div class="box top-level" style="left:900px; top:60px; width:230px;">
+      <h2>📥 telegram_ingest.py</h2>
+      <div class="desc">
+        <code>ingest_telegram_update()</code> — the core parsing pipeline for every incoming Telegram
+        message, text or /poll batch alike.
+      </div>
+      <details class="panel">
+        <summary>Expand: parsing order</summary>
+        <div class="inner">
+          <ol style="margin:4px 0 4px 16px; padding:0;">
+            <li>Dedup on <code>source_event_id = "telegram:update:{update_id}"</code> against <code>IngestionJob</code> → outcome <code>duplicate</code></li>
+            <li>Extract text/caption; empty → <code>IngestionJob(status="ignored")</code></li>
+            <li><code>extract_explicit_node_type()</code> — <code>TOPIC_PREFIX_PATTERN</code> (<code>^topic:\s*</code>) forces <code>type="topic"</code></li>
+            <li><code>extract_workspace_switch_command()</code> — three regexes: <code>switch to X</code>, <code>switch workspace to X</code>, <code>switch workspace to timeaware X</code> → outcome <code>switched_workspace</code>, no node created</li>
+            <li><code>extract_tags_from_text()</code> — <code>HASHTAG_PATTERN = (?&lt;!\w)#([A-Za-z][A-Za-z0-9_-]*)</code>, then <code>strip_tags_from_text()</code> removes them from <code>raw_text</code></li>
+            <li><code>classify_telegram_text(raw_text)</code> by character length (see Node types box) unless an explicit type was set</li>
+            <li><code>prepare_node_content()</code> builds <code>normalized_text</code> + metadata (normalization, linker_tags)</li>
+            <li><code>Node</code> row created with <code>source="telegram"</code>, <code>author</code> = Telegram username, <code>telegram_message_id = "{chat_id}:{message_id}"</code></li>
+          </ol>
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Expand: offset &amp; polling</summary>
+        <div class="inner">
+          <p><code>poll_telegram_updates()</code> calls Telegram's <code>getUpdates</code> with
+          <code>limit=telegram_poll_limit</code> (default <span class="const">25</span>) and
+          <code>timeout=1</code>. The next offset (<code>last update_id + 1</code>) is persisted in
+          <code>AppState</code> under key <code>telegram_poll_offset</code> via
+          <code>store_telegram_offset()</code> — survives restarts.</p>
+        </div>
+      </details>
+    </div>
+
+    <!-- NODE TYPES -->
+    <div class="box" style="left:900px; top:330px; width:230px; border-color:#fb923c;">
+      <h2 style="color:#fb923c;">🏷️ Node classification</h2>
+      <div class="desc">
+        <code>ontology.py: NODE_TYPES</code> = line, quote, paragraph, idea, thought_piece,
+        article_candidate, article, topic, document.
+      </div>
+      <details class="panel">
+        <summary>Expand: length-based classifier</summary>
+        <div class="inner">
+          <code>telegram_ingest.classify_telegram_text()</code>:
+          <table>
+            <tr><th>Length</th><th>Type</th></tr>
+            <tr><td>≤ 140 chars</td><td><code>line</code></td></tr>
+            <tr><td>141–400</td><td><code>idea</code></td></tr>
+            <tr><td>401–1500</td><td><code>thought_piece</code></td></tr>
+            <tr><td>1500+</td><td><code>document</code></td></tr>
+          </table>
+        </div>
+      </details>
+    </div>
+
+    <!-- MODELS / DB -->
+    <div class="box memory-box" style="left:1260px; top:60px; width:240px;">
+      <h2>🗄️ models.py + SQLite</h2>
+      <div class="desc">
+        SQLAlchemy 2.0 declarative models. Default DB path
+        <code>data/twitter_poster.db</code> (a holdover name from an earlier project; the Settings
+        class is still literally named for it — <code>app_name = "twitter-poster-backend"</code>).
+      </div>
+      <details class="panel">
+        <summary>Expand: tables</summary>
+        <div class="inner">
+          <table>
+            <tr><th>Table</th><th>Purpose</th></tr>
+            <tr><td><code>users</code></td><td>telegram_chat_id, access_token, email, bcrypt password_hash</td></tr>
+            <tr><td><code>workspaces</code></td><td>name (unique), type (general|time_aware), embed_token, user_id</td></tr>
+            <tr><td><code>nodes</code></td><td>type, raw_text, normalized_text, tags (JSON), metadata_json (JSON), status</td></tr>
+            <tr><td><code>edges</code></td><td>from_node_id, to_node_id, type (freeform text), weight, confidence, evidence</td></tr>
+            <tr><td><code>embeddings</code> / <code>embedding_jobs</code></td><td>vector_json, content_hash dedup, job queue</td></tr>
+            <tr><td><code>link_jobs</code> / <code>link_proposals</code></td><td>per-node edge-discovery queue; review_needed/approved/applied proposals</td></tr>
+            <tr><td><code>internal_tags</code> / <code>internal_tag_memberships</code></td><td>hidden LLM-generated keyword/concept tags, many-to-many to nodes</td></tr>
+            <tr><td><code>experimental_hubs</code> / <code>_memberships</code></td><td>hub_matcher's emergent clusters</td></tr>
+            <tr><td><code>node_versions</code> / <code>article_draft_versions</code></td><td>snapshot_json history, reason-tagged</td></tr>
+            <tr><td><code>ingestion_jobs</code></td><td>one row per Telegram update_id, dedup ledger</td></tr>
+            <tr><td><code>article_drafts</code></td><td>outline_json, content_markdown, provenance_json</td></tr>
+            <tr><td><code>app_state</code></td><td>key/value_json — telegram offset, active-workspace pointer(s)</td></tr>
+          </table>
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Expand: SQLite auto-migration</summary>
+        <div class="inner">
+          <p><code>database.py: _migrate_sqlite_schema()</code> runs on every boot — inspects existing
+          columns via SQLAlchemy's <code>inspect()</code> and <code>ALTER TABLE ... ADD COLUMN</code>s
+          anything missing (e.g. backfilling <code>workspace_id</code> across 13 tables,
+          <code>users.email</code>/<code>password_hash</code>, <code>workspaces.type</code>/<code>embed_token</code>/<code>user_id</code>).
+          <code>_backfill_workspace_ids()</code> then points every orphan row at a
+          <code>"maker graph"</code> default workspace. This is how the schema evolved live against a
+          single SQLite file without Alembic.</p>
+        </div>
+      </details>
+    </div>
+
+    <!-- EMBEDDING + LINK JOBS -->
+    <div class="box" style="left:900px; top:600px; width:260px; border-color:#86efac;">
+      <h2 style="color:#86efac;">🧮 Embedding + Link job queues</h2>
+      <div class="desc">
+        Every node create/update enqueues both an <code>EmbeddingJob</code> and a <code>LinkJob</code>
+        (<code>enqueue_embedding_job</code>, <code>enqueue_link_job</code> in <code>main.py</code>).
+      </div>
+      <details class="panel">
+        <summary>Expand: embedding_ops.py</summary>
+        <div class="inner">
+          <p><code>embedding_input_for_node()</code> = <code>normalized_text or raw_text</code>.
+          <code>content_hash = sha256("{model_name}\n{text}")</code> dedupes — identical content under the
+          same model reuses an existing embedding row instead of recomputing (even cross-node:
+          <code>cached_embedding</code> lookup clones the vector). Model:
+          <code>sentence-transformers/all-mpnet-base-v2</code> (default), loaded lazily via
+          <code>SentenceTransformer</code> and cached in <code>_MODEL_CACHE</code>.
+          <code>process_pending_embedding_jobs()</code> batches up to
+          <code>embedding_batch_size</code> (default <span class="const">10</span>) pending jobs.</p>
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Expand: linker_ops.py — tag-based auto linking</summary>
+        <div class="inner">
+          <p><code>process_pending_link_jobs()</code> pulls each node's internal keyword/concept tags via
+          <code>shared_internal_tags_for_node()</code> (reverse lookup on <code>internal_tag_memberships</code>),
+          finds other nodes sharing at least one tag, then runs <code>run_tag_matcher</code>
+          (see Edge creation box) against just those candidates — not the whole workspace — before
+          creating <code>Edge</code> rows directly with <code>created_by="linker"</code>.
+          <code>SYMMETRIC_RELATIONS = {"similar_to", "contradicts"}</code> are checked in both directions
+          to avoid duplicate edges.</p>
+        </div>
+      </details>
+    </div>
+
+    <!-- EDGE CREATION FUNCTIONS -->
+    <div class="box worker-box" style="left:1620px; top:60px; width:260px;">
+      <h2>🪄 edge_creation_ops.py</h2>
+      <div class="desc">
+        Five named functions behind <code>POST /edge-creation/{function_name}</code>, triggered from the
+        Advanced tab or the Generate Edges button. <code>EDGE_CREATION_FUNCTIONS</code> =
+        tag_matcher, embedding_matcher, llm_matcher, llm_debator, hub_matcher.
+      </div>
+      <details class="panel">
+        <summary>Expand: tag_matcher</summary>
+        <div class="inner">
+          Extracts/reuses "internal tags" (8 keywords + 7 concepts) per node via Ollama
+          (<code>ollama_tag_model = "qwen2.5:3b-instruct"</code>, prompt frames the task as
+          "designing external brain application... for 7 astronauts going to mars"), falling back to
+          <code>_heuristic_extract_internal_tags()</code> (token-frequency + bigram/trigram phrases) if
+          Ollama is unavailable or <code>use_ollama_for_internal_tags=False</code>. Score = shared tag
+          count / smaller tag-set size.
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Expand: embedding_matcher &amp; llm_matcher/debator</summary>
+        <div class="inner">
+          <p><code>embedding_matcher</code> uses a deterministic <b>hash-based</b> pseudo-embedding
+          (<code>_hash_embedding()</code> — md5 of each token bucketed into a 64-dim vector with a sign
+          bit), cosine similarity, threshold <span class="const">0.58</span> default.</p>
+          <p><code>llm_matcher</code> (threshold <span class="const">0.45</span>) and
+          <code>llm_debator</code> (threshold <span class="const">0.42</span>) are explicitly labelled
+          "Heuristic ... placeholder" in code — they blend the same hash-similarity (72%/70% weight) with
+          lexical Jaccard overlap (28%/30%) rather than calling a real LLM; <code>llm_debator</code>
+          additionally fabricates pro/con/judge argument strings for the UI's debate summary.</p>
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Expand: edge type decision &amp; hub_matcher</summary>
+        <div class="inner">
+          <p><code>_edge_type_for_pair()</code> picks from <code>DEFAULT_EDGE_TYPES</code> = similar_to,
+          supports, contradicts, expands, led_to, belongs_to_topic: a <code>topic</code>-typed node forces
+          <code>belongs_to_topic</code>; <code>CONTRAST_WORDS</code> (but/however/instead/except/unless/yet)
+          can force <code>contradicts</code>; similarity ≥0.7 → <code>similar_to</code>; lexical overlap
+          ≥0.24 with a length gap &gt;50 chars → <code>expands</code>; else <code>supports</code>.</p>
+          <p><code>hub_matcher</code> groups nodes by shared top-4 concepts into
+          <code>ExperimentalHub</code> rows (persisted, signature = <code>"hub_matcher:{label}"</code>) —
+          proposes clusters, not pairwise edges.</p>
+        </div>
+      </details>
+    </div>
+
+    <!-- FRONTEND -->
+    <div class="box frontend-box" style="left:120px; top:330px; width:330px;">
+      <h2>🖥️ Frontend — app.js (graph canvas)</h2>
+      <div class="desc">
+        Vanilla JS + hand-rolled SVG, <b>no framework</b>, served from <code>src/frontend</code> and
+        mounted at <code>/static</code>; <code>index.html</code> is the <code>/graph</code> page.
+      </div>
+      <details class="panel">
+        <summary>Expand: force-directed layout constants</summary>
+        <div class="inner">
+          <code>app.js: forceLayout(nodes, edges, width, height)</code>, 320 simulation iterations:
+          <table>
+            <tr><th>Constant</th><th>Value</th></tr>
+            <tr><td><code>repulsion</code></td><td class="const">28000</td></tr>
+            <tr><td><code>attraction</code></td><td class="const">0.018</td></tr>
+            <tr><td><code>centerStrength</code></td><td class="const">0.004</td></tr>
+            <tr><td><code>damping</code></td><td class="const">0.82</td></tr>
+            <tr><td><code>minDist</code> (repulsion floor)</td><td class="const">240</td></tr>
+            <tr><td><code>idealLength</code> (edge spring rest length)</td><td class="const">280</td></tr>
+            <tr><td><code>iterations</code></td><td class="const">320</td></tr>
+          </table>
+          <p>Pairwise repulsion falls off with <code>1/distance²</code>; edges act as springs pulling
+          toward <code>idealLength</code>. A separate <code>polarLayout()</code> (orbital rings) and
+          <code>timelineLayout()</code> (horizontal time axis, used only for time-aware workspaces) are
+          also defined.</p>
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Expand: node cards, dragging, saved positions</summary>
+        <div class="inner">
+          <p>Node card sizing: width 178px (206px if text &gt;240 chars), image thumbnail adds
+          <code>IMAGE_HEIGHT = 120</code>px at the top, WhatsApp-style. Dragging a node writes to an
+          in-memory <code>nodePositions</code> map and persists via <code>metadata_json.ui_position</code>
+          (PATCH to <code>/nodes/{id}</code>) so layout survives a refresh — <code>forceLayout()</code>
+          only runs for nodes that don't already have a stored/dragged position.</p>
+          <p>Edge curves sag based on distance: <code>sag = clamp(distance * 0.15, 20, 54)</code> px.
+          Edge weight slider in the UI is 0–100; sent to the API divided by 100 (<code>weight/100</code>)
+          since the backend stores 0–1 floats.</p>
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Expand: other frontend pages</summary>
+        <div class="inner">
+          <ul>
+            <li><code>landing.html</code> — marketing/home page at <code>/</code></li>
+            <li><code>advanced.html</code> + <code>advanced.js</code> — raw API forms for the 5 traversal methods and 5 edge-creation methods, hits the endpoints directly and shows JSON</li>
+            <li><code>embed.html</code> / <code>embed.js</code> / <code>embed.css</code> — read-only embeddable graph view, gated by <code>workspace_id</code> + <code>embed_token</code> (no cookies/auth)</li>
+            <li><code>login.html</code> — email/password gate in front of <code>/graph</code></li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <!-- TRAVERSAL -->
+    <div class="box" style="left:480px; top:780px; width:300px; border-color:#7dd3fc;">
+      <h2 style="color:#7dd3fc;">🧭 traversal_ops.py</h2>
+      <div class="desc">
+        BFS-style traversal over the Edge/Node graph, used by path tracing, Advanced tab, narrative
+        generation, and article outline planning.
+      </div>
+      <details class="panel">
+        <summary>Expand: fetch_neighbors &amp; collect_subgraph</summary>
+        <div class="inner">
+          <p><code>fetch_neighbors()</code> — direction <code>incoming|outgoing|both</code>, optional
+          <code>edge_type</code> filter, sorted by <code>weight desc</code>. <code>collect_subgraph()</code>
+          does a weighted BFS from a root node up to <code>depth</code> hops (default 2) and
+          <code>limit</code> nodes (default 12), computing a <code>path_score</code> per node =
+          product of edge weights along the best path found (weight floor 0.01 to avoid zeroing out).</p>
+          <p><code>build_outline_sections()</code> groups the traversed subgraph by the edge relation
+          connecting each node back to the root, labelling sections via
+          <code>RELATION_SECTION_TITLES</code> (e.g. <code>supports</code> → "Supporting Ideas",
+          <code>contradicts</code> → "Counterpoints", <code>belongs_to_topic</code> → "Topic Connections").</p>
+        </div>
+      </details>
+    </div>
+
+    <!-- NARRATIVE / ARTICLE -->
+    <div class="box" style="left:820px; top:780px; width:300px; border-color:#f472b6;">
+      <h2 style="color:#f472b6;">📖 narrative_ops.py + article_ops.py</h2>
+      <div class="desc">
+        Both consume a <code>collect_subgraph()</code> result and talk to local Ollama; hidden from the
+        deployed app since Ollama isn't available on Railway.
+      </div>
+      <details class="panel">
+        <summary>Expand: narrative generation</summary>
+        <div class="inner">
+          <code>build_narrative_prompt()</code> lists every traversed node (id, depth, path_score, type,
+          text) and edge (from→to, type, weight), then asks the model for an exact N-paragraph
+          (default 2) narrative in the voice of someone narrating the evolution of the user's thought —
+          explicitly told not to mention node ids or "the graph". Model:
+          <code>ollama_narrative_model = "qwen2.5:3b-instruct"</code> via
+          <code>POST {ollama_base_url}/api/generate</code>.
+        </div>
+      </details>
+      <details class="panel">
+        <summary>Expand: article drafts</summary>
+        <div class="inner">
+          <code>create_article_draft()</code> builds an <code>outline_json</code> from
+          <code>build_outline_plan()</code> (traversal + outline sections) and stores it alongside a
+          freeform <code>content_markdown</code> field; every edit calls
+          <code>create_article_draft_version()</code> first, mirroring the node-versioning pattern
+          (<code>node_versions</code> / <code>article_draft_versions</code>, both reason-tagged
+          snapshots).
+        </div>
+      </details>
+    </div>
+
+    <!-- WORKSPACES -->
+    <div class="box" style="left:1140px; top:780px; width:280px; border-color:#fbbf24;">
+      <h2 style="color:#fbbf24;">🗂️ workspace_ops.py</h2>
+      <div class="desc">
+        Two workspace types: <code>general</code> (force-directed, no time axis) and
+        <code>time_aware</code> (horizontal timeline, requires a <code>time_label</code> per node).
+        Default seed workspace name: <code>"humans (default)"</code>; DB-level default name:
+        <code>"maker graph"</code> (<code>DEFAULT_WORKSPACE_NAME</code>).
+      </div>
+      <details class="panel">
+        <summary>Expand: active-workspace pointer &amp; per-user naming</summary>
+        <div class="inner">
+          <p>Active workspace is tracked in <code>AppState</code>: key
+          <code>"current_workspace"</code> for the anonymous/global path, or
+          <code>"current_workspace:{user.id}"</code> per logged-in user. Per-user workspaces created via
+          <code>get_or_create_workspace_for_user()</code> are internally named
+          <code>"u{user_id}:{display_name}"</code> to satisfy the global unique constraint on
+          <code>workspaces.name</code>, with the human-readable name kept in
+          <code>metadata_json.display_name</code> (<code>get_workspace_display_name()</code> prefers it).</p>
+        </div>
+      </details>
+    </div>
+
+    <!-- DEPLOYMENT -->
+    <div class="box" style="left:1460px; top:780px; width:260px; border-color:#86efac;">
+      <h2 style="color:#86efac;">🚢 Deployment</h2>
+      <div class="desc">
+        <code>Dockerfile</code>: <code>python:3.12-slim</code>, copies <code>src/app</code> →
+        <code>/app/app</code>, <code>src/frontend</code> → <code>/app/frontend</code>,
+        <code>src/uploads</code> → <code>/app/seed-uploads</code>. Runs
+        <code>uvicorn app.main:app --host 0.0.0.0 --port 8000</code>.
+      </div>
+      <details class="panel">
+        <summary>Expand: railway.toml</summary>
+        <div class="inner">
+          Deploys on Railway with <code>restartPolicyType = "on_failure"</code>, max 3 retries. Env vars:
+          <code>DATABASE_URL = sqlite:////data/twitter_poster.db</code>,
+          <code>TWITTER_POSTER_PUBLIC_URL = https://seldon.railway.app</code>,
+          <code>UPLOADS_DIR = /data/uploads</code> — persistent volume mounted at <code>/data</code>
+          outlives container restarts (unlike the ephemeral filesystem elsewhere in the image).
+        </div>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<div id="minimap"></div>
+
+<div class="legend">
+  <div><span class="swatch" style="background:#7dd3fc;"></span><b>Blue</b> — core API / request flow (FastAPI routes, traversal)</div>
+  <div><span class="swatch" style="background:#86efac;"></span><b>Green</b> — async job queues / worker loops (embeddings, links, deployment)</div>
+  <div><span class="swatch" style="background:#f472b6;"></span><b>Pink</b> — persistence / generated content (DB, narrative, article drafts)</div>
+  <div><span class="swatch" style="background:#fbbf24;"></span><b>Amber</b> — Telegram, node classification, workspaces</div>
+  <div><span class="swatch" style="background:#c084fc;"></span><b>Purple</b> — background polling</div>
+  <div style="margin-top:4px;">Dashed lines = asynchronous / queued hand-off, not a direct same-request call.</div>
+</div>
+
+<script>
+(function() {
+  var viewport = document.getElementById('viewport');
+  var canvas = document.getElementById('canvas');
+  var zoomLabel = document.getElementById('zoomlabel');
+  var minimap = document.getElementById('minimap');
+
+  var scale = 0.5, panX = 40, panY = 20;
+  var isDragging = false, lastX = 0, lastY = 0;
+  var CANVAS_W = 3400, CANVAS_H = 2250;
+
+  function applyTransform() {
+    canvas.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + scale + ')';
+    zoomLabel.textContent = Math.round(scale * 100) + '%';
+    updateMinimap();
+  }
+
+  function clampScale(s) {
+    return Math.min(2.2, Math.max(0.18, s));
+  }
+
+  viewport.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var rect = viewport.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+    var delta = -e.deltaY * 0.0015;
+    var newScale = clampScale(scale * (1 + delta));
+    // keep the point under the cursor fixed
+    var wx = (mx - panX) / scale;
+    var wy = (my - panY) / scale;
+    panX = mx - wx * newScale;
+    panY = my - wy * newScale;
+    scale = newScale;
+    applyTransform();
+  }, { passive: false });
+
+  viewport.addEventListener('mousedown', function(e) {
+    isDragging = true;
+    lastX = e.clientX; lastY = e.clientY;
+    viewport.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    panX += (e.clientX - lastX);
+    panY += (e.clientY - lastY);
+    lastX = e.clientX; lastY = e.clientY;
+    applyTransform();
+  });
+  window.addEventListener('mouseup', function() {
+    isDragging = false;
+    viewport.classList.remove('dragging');
+  });
+
+  // touch support (basic single-finger pan, two-finger pinch)
+  var touchState = null;
+  viewport.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 1) {
+      touchState = { mode: 'pan', x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+      var dx = e.touches[0].clientX - e.touches[1].clientX;
+      var dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchState = { mode: 'pinch', dist: Math.sqrt(dx*dx+dy*dy), scale: scale };
+    }
+  }, { passive: true });
+  viewport.addEventListener('touchmove', function(e) {
+    if (!touchState) return;
+    if (touchState.mode === 'pan' && e.touches.length === 1) {
+      var dx = e.touches[0].clientX - touchState.x;
+      var dy = e.touches[0].clientY - touchState.y;
+      panX += dx; panY += dy;
+      touchState.x = e.touches[0].clientX;
+      touchState.y = e.touches[0].clientY;
+      applyTransform();
+    } else if (touchState.mode === 'pinch' && e.touches.length === 2) {
+      var dx2 = e.touches[0].clientX - e.touches[1].clientX;
+      var dy2 = e.touches[0].clientY - e.touches[1].clientY;
+      var dist = Math.sqrt(dx2*dx2+dy2*dy2);
+      scale = clampScale(touchState.scale * (dist / touchState.dist));
+      applyTransform();
+    }
+  }, { passive: true });
+  viewport.addEventListener('touchend', function() { touchState = null; });
+
+  document.getElementById('zoomin').onclick = function() {
+    scale = clampScale(scale * 1.2); applyTransform();
+  };
+  document.getElementById('zoomout').onclick = function() {
+    scale = clampScale(scale / 1.2); applyTransform();
+  };
+  document.getElementById('reset').onclick = function() {
+    scale = 0.5; panX = 40; panY = 20; applyTransform();
+  };
+  document.getElementById('expandall').onclick = function() {
+    document.querySelectorAll('details.panel').forEach(function(d) { d.open = true; });
+  };
+  document.getElementById('collapseall').onclick = function() {
+    document.querySelectorAll('details.panel').forEach(function(d) { d.open = false; });
+  };
+
+  // minimap
+  function updateMinimap() {
+    minimap.innerHTML = '';
+    var mmW = minimap.clientWidth, mmH = minimap.clientHeight;
+    var sx = mmW / CANVAS_W, sy = mmH / CANVAS_H;
+    document.querySelectorAll('.box').forEach(function(box) {
+      var left = parseInt(box.style.left) || 0;
+      var top = parseInt(box.style.top) || 0;
+      var w = box.offsetWidth, h = box.offsetHeight;
+      var el = document.createElement('div');
+      el.className = 'mmbox';
+      el.style.left = (left * sx) + 'px';
+      el.style.top = (top * sy) + 'px';
+      el.style.width = Math.max(2, w * sx) + 'px';
+      el.style.height = Math.max(2, h * sy) + 'px';
+      minimap.appendChild(el);
+    });
+    var view = document.createElement('div');
+    view.className = 'mmview';
+    var vpRect = viewport.getBoundingClientRect();
+    var viewLeft = (-panX / scale) * sx;
+    var viewTop = (-panY / scale) * sy;
+    var viewW = (vpRect.width / scale) * sx;
+    var viewH = (vpRect.height / scale) * sy;
+    view.style.left = viewLeft + 'px';
+    view.style.top = viewTop + 'px';
+    view.style.width = viewW + 'px';
+    view.style.height = viewH + 'px';
+    minimap.appendChild(view);
+  }
+
+  // stop drag from starting when clicking inside a box (so text selection / detail toggling works)
+  document.querySelectorAll('.box').forEach(function(box) {
+    box.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+    box.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: true });
+  });
+
+  applyTransform();
+  window.addEventListener('resize', updateMinimap);
+})();
+</script>
+
+</body>
+</html>
